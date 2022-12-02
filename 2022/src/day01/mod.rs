@@ -1,36 +1,20 @@
+use itertools::Itertools;
+
 fn solve_first(input: &str) -> u32 {
     input
-        .split_terminator("\r\n\r\n")
-        .map(|load| {
-            load.lines()
-                .map(str::parse::<u32>)
-                .map(Result::unwrap)
-                .sum()
-        })
+        .split_terminator("\n\n")
+        .map(|load| load.lines().map(|x| x.parse::<u32>().unwrap()).sum())
         .max()
         .unwrap()
 }
 
 fn solve_second(input: &str) -> u32 {
     input
-        .split_terminator("\r\n\r\n")
-        .map(|load| {
-            load.lines()
-                .map(str::parse::<u32>)
-                .map(Result::unwrap)
-                .sum::<u32>()
-        })
-        .fold([0, 0, 0], |mut biggest, mut x| {
-            // could be improved by structuring `biggest` into a binary heap but n=3 so I won't bother
-            for a in &mut biggest {
-                if x > *a {
-                    std::mem::swap(&mut x, a)
-                }
-            }
-
-            biggest
-        })
-        .into_iter()
+        .split_terminator("\n\n")
+        .map(|load| load.lines().map(|x| x.parse::<u32>().unwrap()).sum::<u32>())
+        .sorted() // could be improved by using a min-heap with k=3
+        .rev()
+        .take(3)
         .sum()
 }
 
