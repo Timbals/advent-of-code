@@ -1,13 +1,17 @@
-fn solve_first(input: &str) -> i32 {
-    input
-        .lines()
-        .map(|line| {
-            let mut line = line.split_whitespace().map(|x| x.chars().next().unwrap());
-            let theirs = line.next().unwrap() as i32 - 'A' as i32;
-            let ours = line.next().unwrap() as i32 - 'X' as i32;
-            let diff = (ours - theirs).rem_euclid(3);
+fn parse(input: &str) -> impl Iterator<Item = (i32, i32)> + '_ {
+    input.lines().map(|line| {
+        let mut line = line.split_whitespace().map(|x| x.chars().next().unwrap());
+        let theirs = line.next().unwrap() as i32 - 'A' as i32;
+        let ours = line.next().unwrap() as i32 - 'X' as i32;
 
-            let round_score = (diff + 1).rem_euclid(3) * 3;
+        (theirs, ours)
+    })
+}
+
+fn solve_first(input: &str) -> i32 {
+    parse(input)
+        .map(|(theirs, ours)| {
+            let round_score = (ours - theirs + 1).rem_euclid(3) * 3;
             let selection_score = ours + 1;
 
             round_score + selection_score
@@ -16,15 +20,11 @@ fn solve_first(input: &str) -> i32 {
 }
 
 fn solve_second(input: &str) -> i32 {
-    input
-        .lines()
-        .map(|line| {
-            let mut line = line.split_whitespace().map(|x| x.chars().next().unwrap());
-            let theirs = line.next().unwrap() as i32 - 'A' as i32;
-            let ours = (theirs + line.next().unwrap() as i32 - 'X' as i32 - 1).rem_euclid(3);
-            let diff = (ours - theirs).rem_euclid(3);
+    parse(input)
+        .map(|(theirs, ours)| {
+            let ours = (theirs + ours - 1).rem_euclid(3);
 
-            let round_score = (diff + 1).rem_euclid(3) * 3;
+            let round_score = (ours - theirs + 1).rem_euclid(3) * 3;
             let selection_score = ours + 1;
 
             round_score + selection_score
