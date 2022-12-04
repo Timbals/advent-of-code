@@ -1,31 +1,19 @@
-fn parse(input: &str) -> impl Iterator<Item = [(usize, usize); 2]> + '_ {
+fn parse(input: &str) -> impl Iterator<Item = [usize; 4]> + '_ {
     input.lines().map(|line| {
-        let mut line = line.split(',');
-        std::array::from_fn(|_| {
-            let mut range = line
-                .next()
-                .unwrap()
-                .split('-')
-                .map(|x| x.parse::<usize>().unwrap());
-            (range.next().unwrap(), range.next().unwrap())
-        })
+        let mut line = line.split(['-', ',']).map(|x| x.parse().unwrap());
+        std::array::from_fn(|_| line.next().unwrap())
     })
 }
 
 fn solve_first(input: &str) -> usize {
     parse(input)
-        .filter(|[(l1, r1), (l2, r2)]| (l1 <= l2 && r2 <= r1) || (l2 <= l1 && r1 <= r2))
+        .filter(|[l1, r1, l2, r2]| (l1 <= l2 && r2 <= r1) || (l2 <= l1 && r1 <= r2))
         .count()
 }
 
 fn solve_second(input: &str) -> usize {
     parse(input)
-        .filter(|[(l1, r1), (l2, r2)]| {
-            (l2 <= l1 && l1 <= r2)
-                || (l2 <= r1 && r1 <= r2)
-                || (l1 <= l2 && l2 <= r1)
-                || (l1 <= r2 && r2 <= r1)
-        })
+        .filter(|[l1, r1, l2, r2]| !(r2 < l1 || r1 < l2))
         .count()
 }
 
