@@ -19,14 +19,14 @@ fn solve_second(input: &str) -> u32 {
 }
 
 #[test]
-pub fn day01_sample() {
+pub fn sample() {
     let sample = include_str!("sample.txt");
     assert_eq!(24_000, solve_first(sample));
     assert_eq!(45_000, solve_second(sample));
 }
 
 #[test]
-pub fn day01() {
+pub fn input() {
     let input = include_str!("input.txt");
     assert_eq!(70_613, solve_first(input));
     assert_eq!(205_805, solve_second(input));

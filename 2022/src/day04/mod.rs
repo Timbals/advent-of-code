@@ -30,14 +30,14 @@ fn solve_second(input: &str) -> usize {
 }
 
 #[test]
-pub fn day04_sample() {
+pub fn sample() {
     let sample = include_str!("sample.txt");
     assert_eq!(2, solve_first(sample));
     assert_eq!(4, solve_second(sample));
 }
 
 #[test]
-pub fn day04() {
+pub fn input() {
     let input = include_str!("input.txt");
     assert_eq!(595, solve_first(input));
     assert_eq!(952, solve_second(input));
