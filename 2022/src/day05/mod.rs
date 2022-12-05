@@ -1,11 +1,10 @@
-use itertools::Itertools;
+use itertools::{repeat_n, Itertools};
 use std::array::from_fn;
-use std::collections::VecDeque;
 
-fn solve_first(input: &str) -> String {
-    let mut lines = input.lines();
+fn parse(input: &str) -> (Vec<Vec<char>>, impl Iterator<Item = [usize; 3]> + '_) {
+    let mut lines = input.lines().peekable();
+    let mut stacks = repeat_n(Vec::new(), (lines.peek().unwrap().len() + 1) / 4).collect_vec();
 
-    let mut stacks = Vec::new();
     for line in (&mut lines).take_while(|x| !x.starts_with(" 1")) {
         for (i, cargo) in line
             .chars()
@@ -14,58 +13,52 @@ fn solve_first(input: &str) -> String {
             .enumerate()
             .filter(|(_, cargo)| *cargo != ' ')
         {
-            while stacks.len() <= i {
-                stacks.push(VecDeque::new());
-            }
-            stacks[i].push_back(cargo);
+            stacks[i].push(cargo);
         }
     }
+
+    // reverse each stack because we parsed from top-to-bottom
+    for stack in &mut stacks {
+        let n = stack.len();
+        for i in 0..n / 2 {
+            stack.swap(i, n - i - 1);
+        }
+    }
+
+    // skip empty line
     lines.next();
 
-    for line in lines {
+    let instructions = lines.map(|line| {
         let mut line = line.split(' ');
-        let [quantity, from, to] = from_fn(|_| line.nth(1).unwrap().parse::<usize>().unwrap());
+        from_fn(|_| line.nth(1).unwrap().parse::<usize>().unwrap())
+    });
 
+    (stacks, instructions)
+}
+
+fn solve_first(input: &str) -> String {
+    let (mut stacks, instructions) = parse(input);
+
+    for [quantity, from, to] in instructions {
         for _ in 0..quantity {
-            let cargo = stacks[from - 1].pop_front().unwrap();
-            stacks[to - 1].push_front(cargo);
+            let cargo = stacks[from - 1].pop().unwrap();
+            stacks[to - 1].push(cargo);
         }
     }
 
-    stacks.iter().map(|x| x.front().unwrap()).collect()
+    stacks.iter().map(|x| x.last().unwrap()).collect()
 }
 
 fn solve_second(input: &str) -> String {
-    let mut lines = input.lines();
+    let (mut stacks, instructions) = parse(input);
 
-    let mut stacks = Vec::new();
-    for line in (&mut lines).take_while(|x| !x.starts_with(" 1")) {
-        for (i, cargo) in line
-            .chars()
-            .skip(1)
-            .step_by(4)
-            .enumerate()
-            .filter(|(_, cargo)| *cargo != ' ')
-        {
-            while stacks.len() <= i {
-                stacks.push(VecDeque::new());
-            }
-            stacks[i].push_back(cargo);
-        }
-    }
-    lines.next();
-
-    for line in lines {
-        let mut line = line.split(' ');
-        let [quantity, from, to] = from_fn(|_| line.nth(1).unwrap().parse::<usize>().unwrap());
-
-        let cargos = stacks[from - 1].drain(0..quantity).collect_vec();
-        for cargo in cargos.into_iter().rev() {
-            stacks[to - 1].push_front(cargo);
-        }
+    for [quantity, from, to] in instructions {
+        let n = stacks[from - 1].len();
+        let moving = stacks[from - 1].split_off(n - quantity);
+        stacks[to - 1].extend_from_slice(&moving);
     }
 
-    stacks.iter().map(|x| x.front().unwrap()).collect()
+    stacks.iter().map(|x| x.last().unwrap()).collect()
 }
 
 #[test]
