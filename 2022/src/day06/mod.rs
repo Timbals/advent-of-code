@@ -4,9 +4,8 @@ fn solve<const K: usize>(input: &str) -> usize {
     input
         .as_bytes()
         .windows(K)
-        .enumerate()
-        .find(|(_, x)| HashSet::<u8>::from_iter(x.iter().copied()).len() == K)
-        .map(|(i, _)| i + K)
+        .position(|x| HashSet::<u8>::from_iter(x.iter().copied()).len() == K)
+        .map(|i| i + K)
         .unwrap()
 }
 
