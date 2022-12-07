@@ -1,16 +1,15 @@
 use std::collections::HashMap;
 
+#[derive(Default)]
 struct Directory<'a> {
-    name: &'a str,
-    index: usize,
     parent: usize,
-    files: HashMap<&'a str, usize>,
+    size: usize,
     subdirectories: HashMap<&'a str, usize>,
 }
 
 impl<'a> Directory<'a> {
     fn size(&self, system: &Vec<Directory>) -> usize {
-        self.files.values().sum::<usize>()
+        self.size
             + self
                 .subdirectories
                 .values()
@@ -20,52 +19,31 @@ impl<'a> Directory<'a> {
 }
 
 fn parse(input: &str) -> Vec<Directory> {
-    let root = Directory {
-        name: "",
-        index: 0,
-        parent: 0,
-        files: HashMap::new(),
-        subdirectories: HashMap::new(),
-    };
-    let mut directories = vec![root];
+    let mut directories = vec![Directory::default()];
 
     let mut current = 0;
 
     for line in input.lines() {
-        let mut parts = line.split_whitespace();
-        match parts.next().unwrap() {
-            "$" => {
-                if parts.next().unwrap() == "cd" {
-                    match parts.next().unwrap() {
-                        ".." => current = directories[current].parent,
-                        "/" => current = 0,
-                        dir => {
-                            current = *directories[current].subdirectories.get(dir).unwrap();
-                        }
-                    }
-                }
-            }
-            "dir" => {
-                let name = parts.next().unwrap();
+        match line.split_whitespace().collect::<Vec<_>>().as_slice() {
+            ["$", "cd", ".."] => current = directories[current].parent,
+            ["$", "cd", "/"] => current = 0,
+            ["$", "cd", dir] => current = directories[current].subdirectories[dir],
+            ["$", "ls"] => {}
+            ["dir", name] => {
                 if !directories[current].subdirectories.contains_key(name) {
                     let index = directories.len();
                     directories[current].subdirectories.insert(name, index);
-                    let new = Directory {
-                        name,
-                        index,
+                    directories.push(Directory {
                         parent: current,
-                        files: HashMap::new(),
+                        size: 0,
                         subdirectories: HashMap::new(),
-                    };
-                    directories.push(new);
+                    });
                 }
             }
-            file_size => {
-                let name = parts.next().unwrap();
-                let file_size = file_size.parse::<usize>().unwrap();
-
-                directories[current].files.insert(name, file_size);
+            [size, _] => {
+                directories[current].size += size.parse::<usize>().unwrap();
             }
+            _ => {}
         }
     }
 
