@@ -1,47 +1,30 @@
 use std::collections::HashMap;
 
-#[derive(Default)]
-struct Directory<'a> {
-    parent: usize,
-    size: usize,
-    subdirectories: HashMap<&'a str, usize>,
-}
-
-impl<'a> Directory<'a> {
-    fn size(&self, system: &Vec<Directory>) -> usize {
-        self.size
-            + self
-                .subdirectories
-                .values()
-                .map(|&i| system[i].size(system))
-                .sum::<usize>()
-    }
-}
-
-fn parse(input: &str) -> Vec<Directory> {
-    let mut directories = vec![Directory::default()];
-
-    let mut current = 0;
+fn parse(input: &str) -> HashMap<String, usize> {
+    let mut directories = HashMap::new();
+    let mut current = vec![""];
 
     for line in input.lines() {
         match line.split_whitespace().collect::<Vec<_>>().as_slice() {
-            ["$", "cd", ".."] => current = directories[current].parent,
-            ["$", "cd", "/"] => current = 0,
-            ["$", "cd", dir] => current = directories[current].subdirectories[dir],
-            ["$", "ls"] => {}
-            ["dir", name] => {
-                if !directories[current].subdirectories.contains_key(name) {
-                    let index = directories.len();
-                    directories[current].subdirectories.insert(name, index);
-                    directories.push(Directory {
-                        parent: current,
-                        size: 0,
-                        subdirectories: HashMap::new(),
-                    });
-                }
+            ["$", "cd", ".."] => {
+                current.pop();
             }
+            ["$", "cd", "/"] => current = vec![""],
+            ["$", "cd", dir] => current.push(*dir),
+            ["$", "ls"] => {}
+            ["dir", _] => {}
             [size, _] => {
-                directories[current].size += size.parse::<usize>().unwrap();
+                let size = size.parse::<usize>().unwrap();
+                // we use scan to yield all intermediate paths from the root
+                let parents = current.iter().scan(String::new(), |state, dir| {
+                    state.push_str(dir);
+                    state.push('/'); // the input also works without the separator (but it's technically necessary to differentiate between /a/a/ and /aa/)
+                    Some(state.clone())
+                });
+                for dir in parents {
+                    // this assumes every file is only ever seen once
+                    *directories.entry(dir).or_default() += size;
+                }
             }
             _ => {}
         }
@@ -51,21 +34,17 @@ fn parse(input: &str) -> Vec<Directory> {
 }
 
 fn solve_first(input: &str) -> usize {
-    let directories = parse(input);
-    directories
-        .iter()
-        .map(|x| x.size(&directories))
+    parse(input)
+        .into_values()
         .filter(|&size| size <= 100000)
         .sum()
 }
 
 fn solve_second(input: &str) -> usize {
     let directories = parse(input);
-    let free = 70000000 - directories[0].size(&directories);
-    let needed = 30000000_usize.saturating_sub(free);
+    let needed = directories["/"] - 40_000_000;
     directories
-        .iter()
-        .map(|x| x.size(&directories))
+        .into_values()
         .filter(|&size| size >= needed)
         .min()
         .unwrap()
