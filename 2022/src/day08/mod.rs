@@ -11,6 +11,21 @@ fn parse(input: &str) -> (usize, Vec<i32>) {
     )
 }
 
+/// rotates a given `size`x`size` matrix stored in `slice` by 90° degrees
+fn rotate<T: Copy>(slice: &mut [T], size: usize) {
+    // rotate by flipping twice (first along a diagonal then along a horizontal)
+    for y in 0..size {
+        for x in 0..y {
+            slice.swap(x + y * size, y + x * size);
+        }
+    }
+    for y in 0..(size / 2) {
+        for x in 0..size {
+            slice.swap(x + y * size, x + (size - y - 1) * size);
+        }
+    }
+}
+
 fn solve_first(input: &str) -> usize {
     let (size, mut trees) = parse(input);
     let mut visible = vec![false; trees.len()];
@@ -27,19 +42,8 @@ fn solve_first(input: &str) -> usize {
             }
         }
 
-        // rotate by flipping twice (first along a diagonal then along a horizontal)
-        for y in 0..size {
-            for x in 0..y {
-                trees.swap(x + y * size, y + x * size);
-                visible.swap(x + y * size, y + x * size);
-            }
-        }
-        for y in 0..(size / 2) {
-            for x in 0..size {
-                trees.swap(x + y * size, x + (size - y - 1) * size);
-                visible.swap(x + y * size, x + (size - y - 1) * size);
-            }
-        }
+        rotate(&mut trees, size);
+        rotate(&mut visible, size);
     }
 
     visible.into_iter().filter(|&x| x).count()
@@ -54,24 +58,14 @@ fn solve_second(input: &str) -> usize {
             for x in 0..size {
                 let height = trees[x + y * size];
                 let mut iter = trees[x + y * size + 1..y * size + size].iter().peekable();
-                let p1 = iter.peeking_take_while(|&&x| height > x).count();
-                score[x + y * size] *= p1 + usize::from(iter.next().is_some());
+                let smaller = iter.peeking_take_while(|&&x| height > x).count();
+                let blocker = usize::from(iter.next().is_some());
+                score[x + y * size] *= smaller + blocker;
             }
         }
 
-        // rotate by flipping twice (first along a diagonal then along a horizontal)
-        for y in 0..size {
-            for x in 0..y {
-                trees.swap(x + y * size, y + x * size);
-                score.swap(x + y * size, y + x * size);
-            }
-        }
-        for y in 0..(size / 2) {
-            for x in 0..size {
-                trees.swap(x + y * size, x + (size - y - 1) * size);
-                score.swap(x + y * size, x + (size - y - 1) * size);
-            }
-        }
+        rotate(&mut trees, size);
+        rotate(&mut score, size);
     }
 
     score.into_iter().max().unwrap_or_default()
