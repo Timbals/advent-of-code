@@ -2,21 +2,25 @@ use std::array::from_fn;
 use std::collections::HashSet;
 use std::iter::repeat;
 
-fn solve<const K: usize>(input: &str) -> usize {
-    let mut visited = HashSet::new();
-
-    let mut knots: [(i32, i32); K] = from_fn(|_| (0, 0));
-    for (dx, dy) in input.lines().flat_map(|line| {
-        let movement = match line.chars().next().unwrap() {
-            'U' => (0, 1),
-            'D' => (0, -1),
-            'L' => (-1, 0),
-            'R' => (1, 0),
+fn parse(input: &str) -> impl Iterator<Item = (i32, i32)> + '_ {
+    input.lines().flat_map(|line| {
+        let movement = match line.as_bytes()[0] {
+            b'U' => (0, 1),
+            b'D' => (0, -1),
+            b'L' => (-1, 0),
+            b'R' => (1, 0),
             _ => unreachable!(),
         };
         let count = line[2..].parse().unwrap();
         repeat(movement).take(count)
-    }) {
+    })
+}
+
+fn solve<const K: usize>(input: &str) -> usize {
+    let mut visited = HashSet::new();
+    let mut knots: [(i32, i32); K] = from_fn(|_| (0, 0));
+
+    for (dx, dy) in parse(input) {
         knots[0].0 += dx;
         knots[0].1 += dy;
 
