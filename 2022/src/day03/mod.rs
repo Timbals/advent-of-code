@@ -1,27 +1,24 @@
 use itertools::Itertools;
-use std::array::from_fn;
-use std::collections::HashSet;
+use std::ops::{BitAnd, BitOr};
+
+fn bitset(slice: &[u8]) -> u64 {
+    slice
+        .iter()
+        .map(|c| match c {
+            b'a'..=b'z' => c - b'a' + 1,
+            _ => c - b'A' + 27,
+        })
+        .map(|c| 1_u64 << c)
+        .reduce(u64::bitor)
+        .unwrap_or_default()
+}
 
 fn solve_first(input: &str) -> u32 {
     input
         .lines()
         .map(|rucksack| {
-            let n = rucksack.len();
-            rucksack
-                .chars()
-                .map(|c| {
-                    if c.is_ascii_lowercase() {
-                        c as u32 - 96
-                    } else {
-                        c as u32 - 64 + 26
-                    }
-                })
-                .chunks(n / 2)
-        })
-        .map(|contents| {
-            let mut contents = contents.into_iter();
-            let [left, right] = from_fn(|_| HashSet::<u32>::from_iter(contents.next().unwrap()));
-            *HashSet::intersection(&left, &right).next().unwrap()
+            let (left, right) = rucksack.as_bytes().split_at(rucksack.len() / 2);
+            (bitset(left) & bitset(right)).trailing_zeros()
         })
         .sum()
 }
@@ -29,25 +26,15 @@ fn solve_first(input: &str) -> u32 {
 fn solve_second(input: &str) -> u32 {
     input
         .lines()
-        .map(|rucksack| {
-            rucksack.chars().map(|c| {
-                if c.is_ascii_lowercase() {
-                    c as u32 - 96
-                } else {
-                    c as u32 - 64 + 26
-                }
-            })
-        })
+        .map(str::as_bytes)
+        .map(bitset)
         .chunks(3)
         .into_iter()
-        .map(|contents| {
-            *contents
-                .flat_map(|x| HashSet::<u32>::from_iter(x).into_iter())
-                .counts()
-                .iter()
-                .find(|(_, count)| **count == 3)
-                .unwrap()
-                .0
+        .map(|bitsets| {
+            bitsets
+                .reduce(u64::bitand)
+                .unwrap_or_default()
+                .trailing_zeros()
         })
         .sum()
 }
