@@ -1,17 +1,17 @@
-fn parse(input: &str) -> impl Iterator<Item = [usize; 4]> + '_ {
+pub fn parse(input: &str) -> impl Iterator<Item = [usize; 4]> + '_ {
     input.lines().map(|line| {
         let mut line = line.split(['-', ',']).map(|x| x.parse().unwrap());
         std::array::from_fn(|_| line.next().unwrap())
     })
 }
 
-fn solve_first(input: &str) -> usize {
+pub fn solve_first(input: &str) -> usize {
     parse(input)
         .filter(|[l1, r1, l2, r2]| (l1 <= l2 && r2 <= r1) || (l2 <= l1 && r1 <= r2))
         .count()
 }
 
-fn solve_second(input: &str) -> usize {
+pub fn solve_second(input: &str) -> usize {
     parse(input)
         .filter(|[l1, r1, l2, r2]| !(r2 < l1 || r1 < l2))
         .count()

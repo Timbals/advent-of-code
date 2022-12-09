@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-fn solve_first(input: &str) -> u32 {
+pub fn solve_first(input: &str) -> u32 {
     input
         .split_terminator("\n\n")
         .map(|load| load.lines().map(|x| x.parse::<u32>().unwrap()).sum())
@@ -8,7 +8,7 @@ fn solve_first(input: &str) -> u32 {
         .unwrap()
 }
 
-fn solve_second(input: &str) -> u32 {
+pub fn solve_second(input: &str) -> u32 {
     input
         .split_terminator("\n\n")
         .map(|load| load.lines().map(|x| x.parse::<u32>().unwrap()).sum::<u32>())

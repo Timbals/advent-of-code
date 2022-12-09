@@ -1,7 +1,7 @@
 use itertools::{repeat_n, Itertools};
 use std::array::from_fn;
 
-fn parse(input: &str) -> (Vec<Vec<char>>, impl Iterator<Item = [usize; 3]> + '_) {
+pub fn parse(input: &str) -> (Vec<Vec<char>>, impl Iterator<Item = [usize; 3]> + '_) {
     let mut lines = input.lines().peekable();
     let mut stacks = repeat_n(Vec::new(), (lines.peek().unwrap().len() + 1) / 4).collect_vec();
 
@@ -36,7 +36,7 @@ fn parse(input: &str) -> (Vec<Vec<char>>, impl Iterator<Item = [usize; 3]> + '_)
     (stacks, instructions)
 }
 
-fn solve_first(input: &str) -> String {
+pub fn solve_first(input: &str) -> String {
     let (mut stacks, instructions) = parse(input);
 
     for [quantity, from, to] in instructions {
@@ -49,7 +49,7 @@ fn solve_first(input: &str) -> String {
     stacks.iter().map(|x| x.last().unwrap()).collect()
 }
 
-fn solve_second(input: &str) -> String {
+pub fn solve_second(input: &str) -> String {
     let (mut stacks, instructions) = parse(input);
 
     for [quantity, from, to] in instructions {

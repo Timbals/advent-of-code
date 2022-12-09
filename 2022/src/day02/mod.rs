@@ -1,4 +1,4 @@
-fn parse(input: &str) -> impl Iterator<Item = (i32, i32)> + '_ {
+pub fn parse(input: &str) -> impl Iterator<Item = (i32, i32)> + '_ {
     input.lines().map(|line| {
         let mut line = line.split_whitespace().map(|x| x.chars().next().unwrap());
         let theirs = line.next().unwrap() as i32 - 'A' as i32;
@@ -8,7 +8,7 @@ fn parse(input: &str) -> impl Iterator<Item = (i32, i32)> + '_ {
     })
 }
 
-fn solve_first(input: &str) -> i32 {
+pub fn solve_first(input: &str) -> i32 {
     parse(input)
         .map(|(theirs, ours)| {
             let round_score = (ours - theirs + 1).rem_euclid(3) * 3;
@@ -19,7 +19,7 @@ fn solve_first(input: &str) -> i32 {
         .sum()
 }
 
-fn solve_second(input: &str) -> i32 {
+pub fn solve_second(input: &str) -> i32 {
     parse(input)
         .map(|(theirs, ours)| {
             let ours = (theirs + ours - 1).rem_euclid(3);

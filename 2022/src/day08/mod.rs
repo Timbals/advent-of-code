@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use std::cmp::max;
 
-fn parse(input: &str) -> (usize, Vec<i32>) {
+pub fn parse(input: &str) -> (usize, Vec<i32>) {
     (
         input.lines().next().unwrap().len(),
         input
@@ -12,7 +12,7 @@ fn parse(input: &str) -> (usize, Vec<i32>) {
 }
 
 /// rotates a given `size`x`size` matrix stored in `slice` by 90° degrees
-fn rotate<T: Copy>(slice: &mut [T], size: usize) {
+pub fn rotate<T: Copy>(slice: &mut [T], size: usize) {
     // rotate by flipping twice (first along a diagonal then along a horizontal)
     for y in 0..size {
         for x in 0..y {
@@ -26,7 +26,7 @@ fn rotate<T: Copy>(slice: &mut [T], size: usize) {
     }
 }
 
-fn solve_first(input: &str) -> usize {
+pub fn solve_first(input: &str) -> usize {
     let (size, mut trees) = parse(input);
     let mut visible = vec![false; trees.len()];
 
@@ -49,7 +49,7 @@ fn solve_first(input: &str) -> usize {
     visible.into_iter().filter(|&x| x).count()
 }
 
-fn solve_second(input: &str) -> usize {
+pub fn solve_second(input: &str) -> usize {
     let (size, mut trees) = parse(input);
     let mut score = vec![1; trees.len()];
 

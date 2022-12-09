@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-fn parse(input: &str) -> HashMap<String, usize> {
+pub fn parse(input: &str) -> HashMap<String, usize> {
     let mut directories = HashMap::new();
     let mut current = vec![""];
 
@@ -33,14 +33,14 @@ fn parse(input: &str) -> HashMap<String, usize> {
     directories
 }
 
-fn solve_first(input: &str) -> usize {
+pub fn solve_first(input: &str) -> usize {
     parse(input)
         .into_values()
         .filter(|&size| size <= 100000)
         .sum()
 }
 
-fn solve_second(input: &str) -> usize {
+pub fn solve_second(input: &str) -> usize {
     let directories = parse(input);
     let needed = directories["/"] - 40_000_000;
     directories

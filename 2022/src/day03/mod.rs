@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use std::ops::{BitAnd, BitOr};
 
-fn bitset(slice: &[u8]) -> u64 {
+pub fn bitset(slice: &[u8]) -> u64 {
     slice
         .iter()
         .map(|c| match c {
@@ -13,7 +13,7 @@ fn bitset(slice: &[u8]) -> u64 {
         .unwrap_or_default()
 }
 
-fn solve_first(input: &str) -> u32 {
+pub fn solve_first(input: &str) -> u32 {
     input
         .lines()
         .map(|rucksack| {
@@ -23,7 +23,7 @@ fn solve_first(input: &str) -> u32 {
         .sum()
 }
 
-fn solve_second(input: &str) -> u32 {
+pub fn solve_second(input: &str) -> u32 {
     input
         .lines()
         .map(str::as_bytes)

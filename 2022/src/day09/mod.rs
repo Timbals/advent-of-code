@@ -2,7 +2,7 @@ use std::array::from_fn;
 use std::collections::HashSet;
 use std::iter::repeat;
 
-fn parse(input: &str) -> impl Iterator<Item = (i32, i32)> + '_ {
+pub fn parse(input: &str) -> impl Iterator<Item = (i32, i32)> + '_ {
     input.lines().flat_map(|line| {
         let movement = match line.as_bytes()[0] {
             b'U' => (0, 1),
@@ -16,7 +16,7 @@ fn parse(input: &str) -> impl Iterator<Item = (i32, i32)> + '_ {
     })
 }
 
-fn solve<const K: usize>(input: &str) -> usize {
+pub fn solve<const K: usize>(input: &str) -> usize {
     let mut visited = HashSet::new();
     let mut knots: [(i32, i32); K] = from_fn(|_| (0, 0));
 

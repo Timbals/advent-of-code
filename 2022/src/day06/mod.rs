@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-fn solve<const K: usize>(input: &str) -> usize {
+pub fn solve<const K: usize>(input: &str) -> usize {
     input
         .as_bytes()
         .windows(K)
