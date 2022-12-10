@@ -1,61 +1,35 @@
 use itertools::Itertools;
 use std::iter::once;
 
-pub fn solve_first(input: &str) -> isize {
-    let mut x = 1;
+pub fn parse(input: &str) -> impl Iterator<Item = (usize, isize)> + '_ {
     input
         .lines()
-        .map(str::split_whitespace)
-        .map(|x| x.collect::<Vec<_>>())
-        .flat_map(|instruction| match instruction.as_slice() {
-            ["addx", v] => {
-                let v = v.parse::<isize>().unwrap();
-                x += v;
-                vec![x - v, x]
+        .flat_map(str::split_whitespace)
+        .scan(1, |x, instruction| {
+            let result = Some(*x);
+            match instruction {
+                "addx" => {}
+                "noop" => {}
+                v => *x += v.parse::<isize>().unwrap(),
             }
-            ["noop"] => vec![x],
-            _ => unreachable!(),
+            result
         })
         .enumerate()
-        .filter(|(cycle, _)| (*cycle as isize + 2 - 20) % 40 == 0)
-        .map(|(cycle, x)| (cycle + 2) as isize * x)
+}
+
+pub fn solve_first(input: &str) -> isize {
+    parse(input)
+        .filter(|(cycle, _)| (*cycle as isize + 1 - 20) % 40 == 0)
+        .map(|(cycle, x)| (cycle + 1) as isize * x)
         .sum()
 }
 
 pub fn solve_second(input: &str) -> String {
-    let mut x = 1;
-    once(x)
-        .chain(
-            input
-                .lines()
-                .map(str::split_whitespace)
-                .map(|x| x.collect::<Vec<_>>())
-                .flat_map(|instruction| match instruction.as_slice() {
-                    ["addx", v] => {
-                        let v = v.parse::<isize>().unwrap();
-                        x += v;
-                        vec![x - v, x]
-                    }
-                    ["noop"] => vec![x],
-                    _ => unreachable!(),
-                }),
-        )
-        .enumerate()
+    parse(input)
         .map(|(cycle, x)| ((cycle % 40) as isize, x))
         .chunks(40)
         .into_iter()
-        .flat_map(|line| {
-            line.map(
-                |(position, x)| {
-                    if (position - x).abs() <= 1 {
-                        '#'
-                    } else {
-                        '.'
-                    }
-                },
-            )
-            .chain(once('\n'))
-        })
+        .flat_map(|c| once('\n').chain(c.map(|(p, x)| if (p - x).abs() <= 1 { '#' } else { '.' })))
         .collect()
 }
 
@@ -63,15 +37,31 @@ pub fn solve_second(input: &str) -> String {
 pub fn sample() {
     let sample = include_str!("sample.txt");
     assert_eq!(13140, solve_first(sample));
-    println!("{}", solve_second(sample));
-    // assert_eq!("", solve_second(sample));
+    assert_eq!(
+        "
+##..##..##..##..##..##..##..##..##..##..
+###...###...###...###...###...###...###.
+####....####....####....####....####....
+#####.....#####.....#####.....#####.....
+######......######......######......####
+#######.......#######.......#######.....",
+        solve_second(sample)
+    );
 }
 
 #[test]
 pub fn input() {
     let input = include_str!("input.txt");
     assert_eq!(11220, solve_first(input));
-    println!("{}", solve_second(input));
     // BZPAJELK
-    // assert_eq!(0, solve_second(input));
+    assert_eq!(
+        "
+###..####.###...##....##.####.#....#..#.
+#..#....#.#..#.#..#....#.#....#....#.#..
+###....#..#..#.#..#....#.###..#....##...
+#..#..#...###..####....#.#....#....#.#..
+#..#.#....#....#..#.#..#.#....#....#.#..
+###..####.#....#..#..##..####.####.#..#.",
+        solve_second(input)
+    );
 }
