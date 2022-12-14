@@ -1,7 +1,7 @@
 use itertools::Itertools;
-use std::cmp::max;
+use std::cmp::{max, min};
 
-pub fn solve_first(input: &str) -> usize {
+pub fn parse(input: &str) -> Vec<Vec<bool>> {
     let mut max_y = 0;
 
     let rocks = input
@@ -11,127 +11,72 @@ pub fn solve_first(input: &str) -> usize {
             for ((x1, y1), (x2, y2)) in line
                 .split(" -> ")
                 .map(|pos| pos.split_once(',').unwrap())
+                .map(|(x, y)| (x.parse().unwrap(), y.parse().unwrap()))
                 .tuple_windows()
             {
-                let mut x = x1.parse::<usize>().unwrap();
-                let mut y = y1.parse::<usize>().unwrap();
-                let x2 = x2.parse::<usize>().unwrap();
-                let y2 = y2.parse::<usize>().unwrap();
-
-                positions.push((x, y));
-                max_y = max(max_y, y);
-                while x != x2 || y != y2 {
-                    x = (x as isize + (x2 as isize - x as isize).min(1).max(-1)) as usize;
-                    y = (y as isize + (y2 as isize - y as isize).min(1).max(-1)) as usize;
-                    max_y = max(max_y, y);
-                    positions.push((x, y))
+                for x in min(x1, x2)..=max(x1, x2) {
+                    for y in min(y1, y2)..=max(y1, y2) {
+                        max_y = max(max_y, y);
+                        positions.push((x, y))
+                    }
                 }
             }
             positions
         })
-        .collect_vec();
+        .collect::<Vec<(usize, usize)>>();
 
-    #[derive(Copy, Clone, Debug)]
-    enum Tile {
-        Rock,
-        Sand,
-    }
-
-    let mut tiles = vec![vec![None; max_y + 1]; 1000];
+    let mut tiles = vec![vec![false; max_y + 2]; 1000];
 
     for (x, y) in rocks.into_iter() {
-        tiles[x][y] = Some(Tile::Rock);
+        tiles[x][y] = true;
     }
 
+    tiles
+}
+
+pub fn solve_first(input: &str) -> usize {
+    let mut tiles = parse(input);
+
     let mut count = 0;
-    let mut current = (500, 0);
+    let (mut x, mut y) = (500, 0);
     loop {
-        if current.1 == max_y {
+        if y == tiles[500].len() - 2 {
             break count;
         }
 
-        if tiles[current.0][current.1 + 1].is_none() {
-            current = (current.0, current.1 + 1);
-        } else if tiles[current.0 - 1][current.1 + 1].is_none() {
-            current = (current.0 - 1, current.1 + 1);
-        } else if tiles[current.0 + 1][current.1 + 1].is_none() {
-            current = (current.0 + 1, current.1 + 1);
+        if let Some(nx) = [x, x - 1, x + 1].into_iter().find(|x| !tiles[*x][y + 1]) {
+            (x, y) = (nx, y + 1);
         } else {
-            tiles[current.0][current.1] = Some(Tile::Sand);
-            current = (500, 0);
+            tiles[x][y] = true;
             count += 1;
+            (x, y) = (500, 0);
         }
     }
 }
 
 pub fn solve_second(input: &str) -> usize {
-    let mut max_y = 0;
-
-    let rocks = input
-        .lines()
-        .flat_map(|line| {
-            let mut positions = Vec::new();
-            for ((x1, y1), (x2, y2)) in line
-                .split(" -> ")
-                .map(|pos| pos.split_once(',').unwrap())
-                .tuple_windows()
-            {
-                let mut x = x1.parse::<usize>().unwrap();
-                let mut y = y1.parse::<usize>().unwrap();
-                let x2 = x2.parse::<usize>().unwrap();
-                let y2 = y2.parse::<usize>().unwrap();
-
-                positions.push((x, y));
-                max_y = max(max_y, y);
-                while x != x2 || y != y2 {
-                    x = (x as isize + (x2 as isize - x as isize).min(1).max(-1)) as usize;
-                    y = (y as isize + (y2 as isize - y as isize).min(1).max(-1)) as usize;
-                    max_y = max(max_y, y);
-                    positions.push((x, y))
-                }
-            }
-            positions
-        })
-        .collect_vec();
-
-    #[derive(Copy, Clone, Debug)]
-    enum Tile {
-        Rock,
-        Sand,
-    }
-
-    max_y += 1;
-
-    let mut tiles = vec![vec![None; max_y + 1]; 1000];
-
-    for (x, y) in rocks.into_iter() {
-        tiles[x][y] = Some(Tile::Rock);
-    }
+    let mut tiles = parse(input);
 
     let mut count = 0;
-    let mut current = (500, 0);
+    let (mut x, mut y) = (500, 0);
     loop {
-        if current.1 == max_y {
-            tiles[current.0][current.1] = Some(Tile::Sand);
-            current = (500, 0);
+        if y == tiles[500].len() - 1 {
+            tiles[x][y] = true;
+            (x, y) = (500, 0);
             count += 1;
         }
 
-        if tiles[current.0][current.1 + 1].is_none() {
-            current = (current.0, current.1 + 1);
-        } else if tiles[current.0 - 1][current.1 + 1].is_none() {
-            current = (current.0 - 1, current.1 + 1);
-        } else if tiles[current.0 + 1][current.1 + 1].is_none() {
-            current = (current.0 + 1, current.1 + 1);
+        if let Some(nx) = [x, x - 1, x + 1].into_iter().find(|x| !tiles[*x][y + 1]) {
+            (x, y) = (nx, y + 1);
         } else {
-            tiles[current.0][current.1] = Some(Tile::Sand);
+            tiles[x][y] = true;
             count += 1;
 
-            if current == (500, 0) {
+            if (x, y) == (500, 0) {
                 break count;
             }
 
-            current = (500, 0);
+            (x, y) = (500, 0);
         }
     }
 }
