@@ -29,8 +29,8 @@ pub fn solve<const K: usize>(input: &str) -> usize {
             let (tx, ty) = &mut knots[i + 1];
 
             if (hx - *tx).abs() > 1 || (hy - *ty).abs() > 1 {
-                *tx += (hx - *tx).min(1).max(-1);
-                *ty += (hy - *ty).min(1).max(-1);
+                *tx += (hx - *tx).clamp(-1, 1);
+                *ty += (hy - *ty).clamp(-1, 1);
             }
         }
 
