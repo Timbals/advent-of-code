@@ -1,4 +1,5 @@
-use std::cmp::min;
+use itertools::Itertools;
+use std::cmp::{max, min};
 use std::collections::HashSet;
 
 pub fn parse(input: &str) -> impl Iterator<Item = ((isize, isize), (isize, isize))> + Clone + '_ {
@@ -19,45 +20,53 @@ pub fn parse(input: &str) -> impl Iterator<Item = ((isize, isize), (isize, isize
 
 pub fn solve_first(input: &str, y: isize) -> usize {
     let sensors = parse(input);
-    let mut coverage = HashSet::new();
+    let mut radii = Vec::new();
     let mut beacons = HashSet::new();
     for ((sx, sy), (bx, by)) in sensors {
-        let range = (sx - bx).abs() + (sy - by).abs();
-        let sensor_y = (y - sy).abs();
-        let diff = (range - sensor_y).max(-1);
-        coverage.extend(sx - diff..=sx + diff);
+        let radius = (sx - bx).abs() + (sy - by).abs();
+        let diff = (radius - (y - sy).abs()).max(-1);
+        radii.push(sx - diff..=sx + diff);
 
         if by == y {
             beacons.insert(bx);
         }
     }
 
-    coverage.difference(&beacons).count()
+    radii.sort_by_key(|radius| *radius.start());
+
+    // add the length of the radii and ignore overlapping parts of the radii using `last_end`
+    let mut count = 0;
+    let mut last_end = isize::MIN;
+    for radius in radii.into_iter() {
+        count += max(*radius.end() + 1, last_end) - max(*radius.start(), last_end);
+        last_end = max(*radius.end() + 1, last_end);
+    }
+    count -= beacons.len() as isize;
+
+    count as usize
 }
 
 pub fn solve_second(input: &str, limit: isize) -> isize {
-    let sensors = parse(input);
-    let mut candidates = HashSet::new();
-    for ((sx, sy), (bx, by)) in sensors.clone() {
-        let range = (sx - bx).abs() + (sy - by).abs();
-        let start_x = sx - range - 1;
-        let start_y = sy;
-        for delta in 0..=(range + 1) {
-            let (x, y) = (start_x + delta, start_y + delta);
-            if 0 <= x && x <= limit && 0 <= y && y <= limit {
-                candidates.insert((start_x + delta, start_y + delta));
+    let sensors = parse(input)
+        .map(|((sx, sy), (bx, by))| (sx, sy, (sx - bx).abs() + (sy - by).abs()))
+        .collect_vec();
+
+    for (sx, sy, radius) in sensors.iter().copied() {
+        // check all points on the bottom-left diagonal just outside of the sensor radius
+        for delta in max(0, -(sx - radius - 1))..=min(radius + 1, limit - sy) {
+            let (x, y) = (sx - radius - 1 + delta, sy + delta);
+
+            if sensors
+                .iter()
+                .copied()
+                .all(|(sx, sy, radius)| (sx - x).abs() + (sy - y).abs() > radius)
+            {
+                return x * 4000000 + y;
             }
         }
     }
 
-    for ((sx, sy), (bx, by)) in sensors {
-        let range = (sx - bx).abs() + (sy - by).abs();
-        candidates.retain(|(x, y)| (sx - x).abs() + (sy - y).abs() > range);
-    }
-
-    debug_assert!(candidates.len() == 1);
-    let (x, y) = candidates.into_iter().next().unwrap();
-    x * 4000000 + y
+    unreachable!() // beacon is in one of the corners or at the top or right corners of the sensor radius
 }
 
 #[test]
