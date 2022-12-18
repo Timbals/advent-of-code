@@ -3,16 +3,18 @@ use std::cmp::max;
 use std::iter::once;
 
 pub fn solve(input: &str, end: usize) -> usize {
-    let mut movements = input
-        .trim()
-        .bytes()
-        .map(|x| match x {
-            b'>' => (1, 0),
-            b'<' => (-1, 0),
-            _ => unreachable!(),
-        })
-        .cycle()
-        .intersperse((0, -1));
+    let mut movements = Itertools::intersperse(
+        input
+            .trim()
+            .bytes()
+            .map(|x| match x {
+                b'>' => (1, 0),
+                b'<' => (-1, 0),
+                _ => unreachable!(),
+            })
+            .cycle(),
+        (0, -1),
+    );
 
     let mut rocks = [
         [(0, 0), (1, 0), (2, 0), (3, 0)].as_slice(),
@@ -39,7 +41,7 @@ pub fn solve(input: &str, end: usize) -> usize {
                     == board[tallest as usize - cycle_length - cycle_length
                         ..tallest as usize - cycle_length]
                 {
-                    println!("found cycle with length {} at {}", cycle_length, i);
+                    // println!("found cycle with length {} at {}", cycle_length, i);
                     wait_for_tallest = Some(tallest as usize + cycle_length);
                     cycle_step = cycle_length;
                     previous_cycle_i = i;
@@ -51,16 +53,16 @@ pub fn solve(input: &str, end: usize) -> usize {
             //  sample needs +2 and input needs +1 because `tallest` repeats at cycle border
             let cycle_length = i - previous_cycle_i + 1;
             additional = cycle_step * ((end - i) / cycle_length);
-            println!(
-                "{} {} {} {} {} {} {}",
-                previous_cycle_i,
-                i,
-                (end - i) / cycle_length,
-                (end - i) % cycle_length,
-                cycle_length,
-                cycle_step,
-                additional,
-            );
+            // println!(
+            //     "{} {} {} {} {} {} {}",
+            //     previous_cycle_i,
+            //     i,
+            //     (end - i) / cycle_length,
+            //     (end - i) % cycle_length,
+            //     cycle_length,
+            //     cycle_step,
+            //     additional,
+            // );
             i += ((end - i) / cycle_length) * cycle_length;
         }
 
