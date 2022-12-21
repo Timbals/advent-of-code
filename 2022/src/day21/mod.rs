@@ -1,302 +1,91 @@
 use itertools::Itertools;
 use std::collections::HashMap;
-use std::mem::swap;
+use std::ops::{Add, Div, Mul, Sub};
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone)]
 enum Monkey {
     Value(isize),
-    Add(usize, usize),
-    Sub(usize, usize),
-    Mul(usize, usize),
-    Div(usize, usize),
+    Operation([fn(isize, isize) -> isize; 3], usize, usize),
+}
+
+fn parse(input: &str) -> (HashMap<&str, usize>, Vec<Monkey>) {
+    let indices = input
+        .lines()
+        .enumerate()
+        .map(|(i, x)| (&x[0..4], i))
+        .collect::<HashMap<_, _>>();
+    let nodes = input
+        .lines()
+        .map(
+            |line| match line.split_whitespace().collect_vec().as_slice() {
+                [_, x, op, y] => Monkey::Operation(
+                    match *op {
+                        "+" => [isize::add, isize::sub, isize::sub],
+                        "-" => [isize::sub, isize::add, |x, y| y - x],
+                        "*" => [isize::mul, isize::div, isize::div],
+                        "/" => [isize::div, isize::mul, |x, y| y / x],
+                        _ => unreachable!(),
+                    },
+                    indices[x],
+                    indices[y],
+                ),
+                [_, value] => Monkey::Value(value.parse().unwrap()),
+                _ => unreachable!(),
+            },
+        )
+        .collect();
+
+    (indices, nodes)
 }
 
 pub fn solve_first(input: &str) -> isize {
-    let indices = input
-        .lines()
-        .enumerate()
-        .map(|(i, x)| (&x[0..4], i))
-        .collect::<HashMap<_, _>>();
-    let monkeys = input
-        .lines()
-        .map(|line| {
-            match line
-                .split_at(6)
-                .1
-                .split_whitespace()
-                .collect_vec()
-                .as_slice()
-            {
-                [op1, operand, op2] => {
-                    let op1 = indices[op1];
-                    let op2 = indices[op2];
-                    match *operand {
-                        "+" => Monkey::Add(op1, op2),
-                        "-" => Monkey::Sub(op1, op2),
-                        "*" => Monkey::Mul(op1, op2),
-                        "/" => Monkey::Div(op1, op2),
-                        _ => unreachable!(),
-                    }
-                }
-                [value] => Monkey::Value(value.parse().unwrap()),
-                _ => unreachable!(),
-            }
-        })
-        .collect::<Vec<_>>();
+    let (indices, nodes) = parse(input);
 
-    fn calc_value(monkey: usize, monkeys: &[Monkey]) -> isize {
-        match monkeys[monkey] {
+    fn value(monkey: usize, nodes: &[Monkey]) -> isize {
+        match nodes[monkey] {
             Monkey::Value(v) => v,
-            Monkey::Add(op1, op2) => calc_value(op1, monkeys) + calc_value(op2, monkeys),
-            Monkey::Sub(op1, op2) => calc_value(op1, monkeys) - calc_value(op2, monkeys),
-            Monkey::Mul(op1, op2) => calc_value(op1, monkeys) * calc_value(op2, monkeys),
-            Monkey::Div(op1, op2) => calc_value(op1, monkeys) / calc_value(op2, monkeys),
+            Monkey::Operation([op, ..], x, y) => op(value(x, nodes), value(y, nodes)),
         }
     }
 
-    calc_value(indices["root"], &monkeys)
+    value(indices["root"], &nodes)
 }
 
 pub fn solve_second(input: &str) -> isize {
-    let indices = input
-        .lines()
-        .enumerate()
-        .map(|(i, x)| (&x[0..4], i))
-        .collect::<HashMap<_, _>>();
-    let mut monkeys = input
-        .lines()
-        .map(|line| {
-            match line
-                .split_at(6)
-                .1
-                .split_whitespace()
-                .collect_vec()
-                .as_slice()
-            {
-                [op1, operand, op2] => {
-                    let op1 = indices[op1];
-                    let op2 = indices[op2];
-                    match *operand {
-                        "+" => Monkey::Add(op1, op2),
-                        "-" => Monkey::Sub(op1, op2),
-                        "*" => Monkey::Mul(op1, op2),
-                        "/" => Monkey::Div(op1, op2),
-                        _ => unreachable!(),
-                    }
-                }
-                [value] => Monkey::Value(value.parse().unwrap()),
-                _ => unreachable!(),
-            }
-        })
-        .collect::<Vec<_>>();
+    let (indices, nodes) = parse(input);
 
-    fn calc_value_2<'a>(
-        monkey: usize,
-        monkeys: &'a mut Vec<Monkey>,
-        new_monkeys: &'a mut Vec<Monkey>,
-        cache: &mut Vec<Option<isize>>,
-        count: usize,
-    ) -> isize {
-        if let Some(value) = cache[monkey] {
-            return value;
-        }
-
-        dbg!(monkey, &monkeys[monkey], count);
-
-        if count == 5000 {
-            panic!();
-        }
-
-        let root_monkey = 779; // 0
-        let switch_monkey = 354; // 11
-
-        if monkey == 455 && count == 129 {
-            //return calc_value(monkey, new_monkeys, monkeys, cache, count + 1);
-        }
-
-        let value = match monkeys[monkey] {
-            Monkey::Value(v) => v,
-            Monkey::Add(op1, op2) => {
-                calc_value_2(op1, monkeys, new_monkeys, cache, count + 1)
-                    + calc_value_2(op2, monkeys, new_monkeys, cache, count + 1)
-            }
-            Monkey::Sub(op1, op2) => {
-                if op1 == root_monkey || op2 == root_monkey {
-                    dbg!("swap");
-                    swap(monkeys, new_monkeys);
-                    if op1 == root_monkey {
-                        calc_value_2(op2, monkeys, new_monkeys, cache, count + 1)
-                    } else {
-                        calc_value_2(op1, monkeys, new_monkeys, cache, count + 1)
-                    }
-                } else {
-                    calc_value_2(op1, monkeys, new_monkeys, cache, count + 1)
-                        - calc_value_2(op2, monkeys, new_monkeys, cache, count + 1)
-                }
-            }
-            Monkey::Mul(op1, op2) => {
-                calc_value_2(op1, monkeys, new_monkeys, cache, count + 1)
-                    * calc_value_2(op2, monkeys, new_monkeys, cache, count + 1)
-            }
-            Monkey::Div(op1, op2) => {
-                calc_value_2(op1, monkeys, new_monkeys, cache, count + 1)
-                    / calc_value_2(op2, monkeys, new_monkeys, cache, count + 1)
-            }
-        };
-
-        cache[monkey] = Some(value);
-        dbg!(monkey, value);
-
-        if monkey == switch_monkey {
-            //swap(monkeys, new_monkeys);
-            //return calc_value(monkey, new_monkeys, monkeys, cache, count + 1);
-        }
-
-        value
-    }
-    fn value(monkey: usize, monkeys: &[Monkey]) -> Option<isize> {
-        if monkey == 1482 {
+    fn value(monkey: usize, human: usize, nodes: &[Monkey]) -> Option<isize> {
+        if monkey == human {
             return None;
         }
-        match monkeys[monkey] {
+        match nodes[monkey] {
             Monkey::Value(v) => Some(v),
-            Monkey::Add(op1, op2) => {
-                value(op1, monkeys).and_then(|v| value(op2, monkeys).map(|w| v + w))
-            }
-            Monkey::Sub(op1, op2) => {
-                value(op1, monkeys).and_then(|v| value(op2, monkeys).map(|w| v - w))
-            }
-            Monkey::Mul(op1, op2) => {
-                value(op1, monkeys).and_then(|v| value(op2, monkeys).map(|w| v * w))
-            }
-            Monkey::Div(op1, op2) => {
-                value(op1, monkeys).and_then(|v| value(op2, monkeys).map(|w| v / w))
+            Monkey::Operation([op, ..], x, y) => {
+                Some(op(value(x, human, nodes)?, value(y, human, nodes)?))
             }
         }
     }
 
-    let mut new_monkeys = monkeys.clone();
-    for (i, monkey) in monkeys.iter().enumerate() {
-        match monkey {
-            Monkey::Add(op1, op2) => {
-                new_monkeys[*op1] = Monkey::Sub(i, *op2);
-                new_monkeys[*op2] = Monkey::Sub(i, *op1);
-            }
-            Monkey::Sub(op1, op2) => {
-                new_monkeys[*op1] = Monkey::Add(i, *op2);
-                new_monkeys[*op2] = Monkey::Sub(*op1, i);
-            }
-            Monkey::Mul(op1, op2) => {
-                new_monkeys[*op1] = Monkey::Div(i, *op2);
-                new_monkeys[*op2] = Monkey::Div(i, *op1);
-            }
-            Monkey::Div(op1, op2) => {
-                new_monkeys[*op1] = Monkey::Mul(i, *op2);
-                new_monkeys[*op2] = Monkey::Div(*op1, i);
-            }
-            Monkey::Value(_) => {}
-        }
-    }
-    let humn = indices["humn"];
-    for (i, monkey) in monkeys.iter().enumerate() {
-        match monkey {
-            Monkey::Value(_) if i != humn => new_monkeys[i] = *monkey,
-            _ => {}
-        }
-    }
-
-    //dbg!(&new_monkeys);
-    //let mut cache = monkeys.iter().map(|_| None).collect_vec();
-
-    //calc_value_2(
-    // indices["nfvg"],
-    //&mut monkeys,
-    // &mut new_monkeys,
-    //  &mut cache,
-    //   0,
-    //);
-    //assert!(cache[humn].is_none());
-
-    new_monkeys[indices["hqpw"]] = Monkey::Value(52716091087786);
-
-    for monkey in monkeys.iter() {
-        match monkey {
-            Monkey::Value(_) => {}
-            Monkey::Add(op1, op2) => {
-                assert!(value(*op1, &monkeys).is_some() || value(*op2, &monkeys).is_some())
-            }
-            Monkey::Sub(op1, op2) => {
-                assert!(value(*op1, &monkeys).is_some() || value(*op2, &monkeys).is_some())
-            }
-            Monkey::Mul(op1, op2) => {
-                assert!(value(*op1, &monkeys).is_some() || value(*op2, &monkeys).is_some())
-            }
-            Monkey::Div(op1, op2) => {
-                assert!(value(*op1, &monkeys).is_some() || value(*op2, &monkeys).is_some())
-            }
-        }
-    }
-
-    let mut current = monkeys[indices["hqpw"]];
-    let mut current_value = 52716091087786;
-    loop {
-        match current {
-            Monkey::Value(_) => return current_value,
-            Monkey::Add(op1, op2) => {
-                if let Some(x1) = value(op1, &monkeys) {
-                    current_value = current_value - x1;
-                    current = monkeys[op2];
-                } else if let Some(x2) = value(op2, &monkeys) {
-                    current_value = current_value - x2;
-                    current = monkeys[op1];
-                }
-            }
-            Monkey::Sub(op1, op2) => {
-                if let Some(x1) = value(op1, &monkeys) {
-                    current_value = x1 - current_value;
-                    current = monkeys[op2];
-                } else if let Some(x2) = value(op2, &monkeys) {
-                    current_value = current_value + x2;
-                    current = monkeys[op1];
-                }
-            }
-            Monkey::Mul(op1, op2) => {
-                if let Some(x1) = value(op1, &monkeys) {
-                    current_value = current_value / x1;
-                    current = monkeys[op2];
-                } else if let Some(x2) = value(op2, &monkeys) {
-                    current_value = current_value / x2;
-                    current = monkeys[op1];
-                }
-            }
-            Monkey::Div(op1, op2) => {
-                if let Some(x1) = value(op1, &monkeys) {
-                    current_value = x1 / current_value;
-                    current = monkeys[op2];
-                } else if let Some(x2) = value(op2, &monkeys) {
-                    current_value = current_value * x2;
-                    current = monkeys[op1];
+    fn solve(monkey: usize, s: isize, human: usize, nodes: &[Monkey]) -> isize {
+        match nodes[monkey] {
+            Monkey::Value(_) => s,
+            Monkey::Operation([_, solve_x, solve_y], x, y) => {
+                if let Some(v) = value(x, human, nodes) {
+                    solve(y, solve_y(s, v), human, nodes)
+                } else {
+                    solve(x, solve_x(s, value(y, human, nodes).unwrap()), human, nodes)
                 }
             }
         }
     }
-    //value(indices["qcjd"], &new_monkeys, 0) - 203
 
-    //calc_value_2(
-    //    indices["qcjd"],
-    //    &mut new_monkeys,
-    //   &mut monkeys,
-    //   &mut cache,
-    //   0,
-    //) - calc_value_2(
-    //   indices["nfvg"],
-    //   &mut monkeys,
-    //   &mut new_monkeys,
-    //   &mut cache,
-    //   0,
-    //)
+    let root_value = 2 * match nodes[indices["root"]] {
+        Monkey::Operation(_, x, y) => value(x, indices["humn"], &nodes)
+            .unwrap_or_else(|| value(y, indices["humn"], &nodes).unwrap()),
+        Monkey::Value(_) => unreachable!(),
+    };
 
-    //calc_value(humn, &mut new_monkeys, &mut monkeys, &mut cache, 0)
+    solve(indices["root"], root_value, indices["humn"], &nodes)
 }
 
 #[test]
@@ -310,5 +99,5 @@ pub fn sample() {
 pub fn input() {
     let input = include_str!("input.txt");
     assert_eq!(158661812617812, solve_first(input));
-    assert_eq!(3352886133831, solve_second(input)); // 2313 too low
+    assert_eq!(3352886133831, solve_second(input));
 }
