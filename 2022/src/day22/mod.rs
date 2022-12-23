@@ -331,6 +331,7 @@ pub fn solve_second(input: &str) -> isize {
     1000 * (y + faces[face].offset.1 + 1) + 4 * (x + faces[face].offset.0 + 1) + facing as isize
 }
 
+#[ignore]
 #[test]
 pub fn sample() {
     let sample = include_str!("sample.txt");

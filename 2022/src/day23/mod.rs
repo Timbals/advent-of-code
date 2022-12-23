@@ -1,176 +1,68 @@
-use itertools::Itertools;
-
-#[derive(Copy, Clone, Eq, PartialEq)]
-enum Tile {
-    Empty,
-    Elf,
-}
-
-fn print_board(board: &Vec<Vec<Tile>>) {
-    for row in board {
-        println!(
-            "{}",
-            row.iter()
-                .map(|x| match x {
-                    Tile::Empty => '.',
-                    Tile::Elf => '#',
-                })
-                .join("")
-        );
-    }
-}
+use ahash::{AHashMap, AHashSet};
 
 pub fn solve(input: &str, round_limit: Option<usize>) -> usize {
-    let mut board = input
+    let mut elves = input
         .lines()
-        .map(|line| {
+        .enumerate()
+        .flat_map(|(y, line)| {
             line.as_bytes()
                 .iter()
-                .map(|x| match x {
-                    b'.' => Tile::Empty,
-                    b'#' => Tile::Elf,
-                    _ => unreachable!(),
-                })
-                .collect_vec()
+                .enumerate()
+                .filter(|(_, v)| **v == b'#')
+                .map(move |(x, _)| (x as isize, y as isize))
         })
-        .collect_vec();
+        .collect::<AHashSet<_>>();
 
-    let mut directions = vec![
-        [(0, -1), (-1, -1), (1, -1)],
-        [(0, 1), (-1, 1), (1, 1)],
-        [(-1, 0), (-1, -1), (-1, 1)],
-        [(1, 0), (1, -1), (1, 1)],
-    ];
+    for i in 0..round_limit.unwrap_or(usize::MAX) {
+        let mut movements = AHashMap::new();
 
-    let mut proposed = Vec::new();
-    for i in 0.. {
-        if let Some(round_limit) = round_limit {
-            if i == round_limit {
-                break;
-            }
-        }
-        // print_board(&board);
-        // println!("----------------------");
+        for (x, y) in elves.iter().copied() {
+            let neighbors = [
+                elves.contains(&(x - 1, y - 1)),
+                elves.contains(&(x - 1, y)),
+                elves.contains(&(x - 1, y + 1)),
+                elves.contains(&(x, y - 1)),
+                elves.contains(&(x, y + 1)),
+                elves.contains(&(x + 1, y - 1)),
+                elves.contains(&(x + 1, y)),
+                elves.contains(&(x + 1, y + 1)),
+            ];
 
-        proposed.clear();
-
-        for (x, y) in board
-            .iter()
-            .enumerate()
-            .flat_map(|(y, row)| row.iter().enumerate().map(move |(x, v)| (y, x, v)))
-            .filter(|(_, _, v)| **v == Tile::Elf)
-            .map(|(y, x, _)| (x, y))
-        {
-            let (x, y) = (x as isize, y as isize);
-
-            let mut elf = false;
-            for dy in -1..=1 {
-                for dx in -1..=1 {
-                    if !(dx == 0 && dy == 0)
-                        && *board
-                            .get((y + dy) as usize)
-                            .and_then(|row| row.get((x + dx) as usize))
-                            .unwrap_or(&Tile::Empty)
-                            == Tile::Elf
-                    {
-                        elf = true;
-                    }
-                }
-            }
-            if !elf {
+            if neighbors.iter().all(|&v| !v) {
                 continue;
             }
 
-            'outer: for direction in &directions {
-                for (nx, ny) in direction.map(|(dx, dy)| (x + dx, y + dy)) {
-                    if *board
-                        .get(ny as usize)
-                        .and_then(|row| row.get(nx as usize))
-                        .unwrap_or(&Tile::Empty)
-                        != Tile::Empty
-                    {
-                        continue 'outer;
-                    }
-                }
-
-                proposed.push(((x, y), (x + direction[0].0, y + direction[0].1)));
-                break;
-            }
-        }
-
-        for (k, _) in proposed
-            .iter()
-            .map(|(_, to)| *to)
-            .counts()
-            .iter()
-            .filter(|(_, v)| **v > 1)
-        {
-            for i in (0..proposed.len()).rev() {
-                if proposed[i].1 == *k {
-                    proposed.swap_remove(i);
+            let dirs = [
+                (!neighbors[3] && !neighbors[0] && !neighbors[5], (0, -1)),
+                (!neighbors[4] && !neighbors[2] && !neighbors[7], (0, 1)),
+                (!neighbors[1] && !neighbors[0] && !neighbors[2], (-1, 0)),
+                (!neighbors[6] && !neighbors[5] && !neighbors[7], (1, 0)),
+            ];
+            if let Some((_, (dx, dy))) = (0..4).map(|j| dirs[(i + j) % 4]).find(|(v, _)| *v) {
+                if let Some((ox, oy)) = movements.insert((x + dx, y + dy), (x, y)) {
+                    movements.remove(&(x + dx, y + dy));
+                    movements.extend([((x, y), (x, y)), ((ox, oy), (ox, oy))]);
                 }
             }
         }
 
-        if round_limit.is_none() && proposed.is_empty() {
+        let mut any = false;
+        for (to, from) in movements.iter() {
+            elves.remove(from);
+            elves.insert(*to);
+            any = true;
+        }
+        if round_limit.is_none() && !any {
             return i + 1;
         }
-
-        let mut extend_left = false;
-        let mut extend_right = false;
-        let mut extend_down = false;
-        let mut extend_up = false;
-        for (_, (x, y)) in &proposed {
-            if *x < 0 {
-                extend_left = true;
-            }
-            if *x >= board[0].len() as isize {
-                extend_right = true;
-            }
-            if *y < 0 {
-                extend_up = true;
-            }
-            if *y >= board.len() as isize {
-                extend_down = true;
-            }
-        }
-
-        for row in board.iter_mut() {
-            if extend_left {
-                row.insert(0, Tile::Empty);
-            }
-            if extend_right {
-                row.push(Tile::Empty);
-            }
-        }
-        if extend_up {
-            board.insert(0, vec![Tile::Empty; board[0].len()]);
-        }
-        if extend_down {
-            board.push(vec![Tile::Empty; board[0].len()]);
-        }
-
-        for ((mut from_x, mut from_y), (mut to_x, mut to_y)) in &proposed {
-            if extend_left {
-                from_x += 1;
-                to_x += 1;
-            }
-            if extend_up {
-                from_y += 1;
-                to_y += 1;
-            }
-            board[from_y as usize][from_x as usize] = Tile::Empty;
-            board[to_y as usize][to_x as usize] = Tile::Elf;
-        }
-
-        directions.rotate_left(1);
     }
 
-    board
-        .into_iter()
-        .flat_map(|x| x.into_iter())
-        .filter(|&x| x == Tile::Empty)
-        .count()
+    let y = elves.iter().map(|(_, y)| y);
+    let height = (y.clone().max().unwrap() - y.min().unwrap()).unsigned_abs() + 1;
+    let x = elves.iter().map(|(x, _)| x);
+    let width = (x.clone().max().unwrap() - x.min().unwrap()).unsigned_abs() + 1;
+
+    width * height - elves.len()
 }
 
 #[test]
