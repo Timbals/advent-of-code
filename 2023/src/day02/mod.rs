@@ -1,30 +1,28 @@
-use std::cmp::max;
+use itertools::Itertools;
+
+fn parse_samples(samples: &str) -> impl Iterator<Item = (&str, u32)> {
+    let samples = samples.split("; ").flat_map(|sample| sample.split(", "));
+    samples.map(|sample| {
+        let (number, color) = sample.split_once(' ').unwrap();
+        let number = number.parse::<u32>().unwrap();
+        (color, number)
+    })
+}
 
 pub fn solve_first(input: &str) -> u32 {
     input
         .lines()
         .filter_map(|line| {
-            let (left, right) = line.split_once(": ").unwrap();
-            let id = left[5..].parse::<u32>().unwrap();
-            let samples = right.split("; ");
-            let mut samples = samples.map(|sample| {
-                sample
-                    .split(", ")
-                    .map(|cubes| {
-                        let (number, color) = cubes.split_once(' ').unwrap();
-                        let number = number.parse::<u32>().unwrap();
-                        (number, color)
-                    })
-                    .all(|(number, color)| match color {
-                        "red" => number <= 12,
-                        "green" => number <= 13,
-                        "blue" => number <= 14,
-                        _ => unreachable!(),
-                    })
-            });
-            let possible = samples.all(|x| x);
-
-            possible.then_some(id)
+            let (id, samples) = line.split_once(": ").unwrap();
+            let id = id[5..].parse::<u32>().unwrap();
+            parse_samples(samples)
+                .all(|(color, number)| match color {
+                    "red" => number <= 12,
+                    "green" => number <= 13,
+                    "blue" => number <= 14,
+                    _ => unreachable!(),
+                })
+                .then_some(id)
         })
         .sum()
 }
@@ -33,26 +31,12 @@ pub fn solve_second(input: &str) -> u32 {
     input
         .lines()
         .map(|line| {
-            let (mut red, mut green, mut blue) = (0, 0, 0);
-
-            let (_, right) = line.split_once(": ").unwrap();
-            let samples = right.split("; ");
-            samples.for_each(|sample| {
-                for (number, color) in sample.split(", ").map(|cubes| {
-                    let (number, color) = cubes.split_once(' ').unwrap();
-                    let number = number.parse::<u32>().unwrap();
-                    (number, color)
-                }) {
-                    match color {
-                        "red" => red = max(red, number),
-                        "green" => green = max(green, number),
-                        "blue" => blue = max(blue, number),
-                        _ => unreachable!(),
-                    }
-                }
-            });
-
-            red * green * blue
+            let (_, samples) = line.split_once(": ").unwrap();
+            parse_samples(samples)
+                .into_grouping_map()
+                .max()
+                .values()
+                .product::<u32>()
         })
         .sum()
 }
