@@ -1,3 +1,4 @@
+use itertools::iproduct;
 use std::collections::HashMap;
 
 pub fn solve_first(input: &str) -> u32 {
@@ -8,29 +9,25 @@ pub fn solve_first(input: &str) -> u32 {
         .map(|line| line.chars().collect::<Vec<_>>())
         .collect::<Vec<_>>();
 
-    input.lines().enumerate().for_each(|(y, line)| {
+    for (y, line) in input.lines().enumerate() {
         for number in line
             .split(|c: char| !c.is_ascii_digit())
             .filter(|m| !m.is_empty())
         {
             let x_start = number.as_ptr() as usize - line.as_ptr() as usize;
-            let x_end = x_start + number.len() - 1;
+            let x_end = x_start + number.len();
 
-            let mut symbol = false;
-            for y in y.saturating_add_signed(-1)..=(y + 1) {
-                for x in x_start.saturating_add_signed(-1)..=(x_end + 1) {
-                    let c = grid.get(y).and_then(|line| line.get(x)).unwrap_or(&'.');
-                    if *c != '.' && !c.is_ascii_digit() {
-                        symbol = true;
-                    }
-                }
-            }
-
-            if symbol {
+            if iproduct!(
+                y.saturating_add_signed(-1)..=(y + 1),
+                x_start.saturating_add_signed(-1)..=x_end
+            )
+            .map(|(y, x)| grid.get(y).and_then(|line| line.get(x)).unwrap_or(&'.'))
+            .any(|c| *c != '.' && !c.is_ascii_digit())
+            {
                 sum += number.parse::<u32>().unwrap();
             }
         }
-    });
+    }
 
     sum
 }
@@ -45,29 +42,29 @@ pub fn solve_second(input: &str) -> u32 {
         .map(|line| line.chars().collect::<Vec<_>>())
         .collect::<Vec<_>>();
 
-    input.lines().enumerate().for_each(|(y, line)| {
+    for (y, line) in input.lines().enumerate() {
         for number in line
             .split(|c: char| !c.is_ascii_digit())
             .filter(|m| !m.is_empty())
         {
             let x_start = number.as_ptr() as usize - line.as_ptr() as usize;
-            let x_end = x_start + number.len() - 1;
+            let x_end = x_start + number.len();
 
-            for y in y.saturating_add_signed(-1)..=(y + 1) {
-                for x in x_start.saturating_add_signed(-1)..=(x_end + 1) {
-                    let c = grid.get(y).and_then(|line| line.get(x)).unwrap_or(&'.');
-                    if *c == '*' {
-                        let entry = gears.entry((x, y)).or_default();
-                        entry.push(number.parse::<u32>().unwrap());
-                    }
+            for (y, x) in iproduct!(
+                y.saturating_add_signed(-1)..=(y + 1),
+                x_start.saturating_add_signed(-1)..=x_end
+            ) {
+                if *grid.get(y).and_then(|line| line.get(x)).unwrap_or(&'.') == '*' {
+                    let entry = gears.entry((x, y)).or_default();
+                    entry.push(number.parse::<u32>().unwrap());
                 }
             }
         }
-    });
+    }
 
     for (_, numbers) in gears {
-        if numbers.len() == 2 {
-            sum += numbers[0] * numbers[1]
+        if let [first, second] = numbers.as_slice() {
+            sum += first * second
         }
     }
 
