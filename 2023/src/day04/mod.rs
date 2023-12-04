@@ -1,56 +1,34 @@
 use std::collections::HashSet;
 
-pub fn solve_first(input: &str) -> u32 {
-    input
-        .lines()
-        .map(|line| {
-            let (left, right) = line.split_once(" | ").unwrap();
-            let (_, left) = left.split_once(": ").unwrap();
-            let winning = left
-                .split(' ')
-                .filter(|x| !x.is_empty())
-                .map(|number| number.parse::<u32>().unwrap())
-                .collect::<HashSet<u32>>();
-            let count = right
-                .split(' ')
-                .filter(|x| !x.is_empty())
-                .map(|number| number.parse::<u32>().unwrap())
-                .filter(|x| winning.contains(x))
-                .count() as u32;
-            if count == 0 {
-                0
-            } else {
-                2_u32.pow(count.saturating_add_signed(-1))
-            }
-        })
+fn parse(input: &str) -> impl Iterator<Item = usize> + '_ {
+    input.lines().map(|line| {
+        let (left, right) = line.split_once(" | ").unwrap();
+        let (_, left) = left.split_once(": ").unwrap();
+        let winning = left
+            .split_whitespace()
+            .map(|x| x.parse::<u32>().unwrap())
+            .collect::<HashSet<u32>>();
+        right
+            .split_whitespace()
+            .map(|x| x.parse::<u32>().unwrap())
+            .filter(|x| winning.contains(x))
+            .count()
+    })
+}
+
+pub fn solve_first(input: &str) -> usize {
+    parse(input)
+        .map(|x| if x == 0 { 0 } else { 2_usize.pow(x as u32 - 1) })
         .sum()
 }
 
-pub fn solve_second(input: &str) -> u32 {
-    let matches = input
-        .lines()
-        .map(|line| {
-            let (left, right) = line.split_once(" | ").unwrap();
-            let (_, left) = left.split_once(": ").unwrap();
-            let winning = left
-                .split(' ')
-                .filter(|x| !x.is_empty())
-                .map(|number| number.parse::<u32>().unwrap())
-                .collect::<HashSet<u32>>();
-            let count = right
-                .split(' ')
-                .filter(|x| !x.is_empty())
-                .map(|number| number.parse::<u32>().unwrap())
-                .filter(|x| winning.contains(x))
-                .count();
-            count
-        })
-        .collect::<Vec<_>>();
+pub fn solve_second(input: &str) -> usize {
+    let matches = parse(input).collect::<Vec<_>>();
     let mut cards = vec![1; matches.len()];
 
-    for i in 0..matches.len() {
-        for j in (i + 1)..=(i + matches[i]) {
-            cards[j] += cards[i];
+    for card in 0..cards.len() {
+        for copy_card in (card + 1)..=(card + matches[card]) {
+            cards[copy_card] += cards[card];
         }
     }
 
