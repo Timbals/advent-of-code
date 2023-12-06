@@ -1,6 +1,17 @@
 use std::iter::zip;
 
-pub fn solve_first(input: &str) -> usize {
+fn solve(time: u64, distance: u64) -> u64 {
+    let left = (time as f64 / 2.0) - (time.pow(2) as f64 / 4.0 - distance as f64).sqrt();
+    let right = (time as f64 / 2.0) + (time.pow(2) as f64 / 4.0 - distance as f64).sqrt();
+
+    // Need to subtract/add some epsilon value,
+    // because the solution needs to *beat* and not not just match the distance.
+    // Should really use `next_down`/`next_up` (which also handle edge cases) but they are unstable.
+    (f64::from_bits(right.to_bits() - 1).floor() - f64::from_bits(left.to_bits() + 1).ceil()) as u64
+        + 1
+}
+
+pub fn solve_first(input: &str) -> u64 {
     let mut lines = input.lines();
     let times = lines
         .next()
@@ -16,15 +27,11 @@ pub fn solve_first(input: &str) -> usize {
         .map(|x| x.parse::<u64>().unwrap());
 
     zip(times, distances)
-        .map(|(time, distance)| {
-            (0..time)
-                .filter(|held| (time - held) * held > distance)
-                .count()
-        })
+        .map(|(time, distance)| solve(time, distance))
         .product()
 }
 
-pub fn solve_second(input: &str) -> usize {
+pub fn solve_second(input: &str) -> u64 {
     let mut lines = input.lines();
     let time = lines
         .next()
@@ -41,9 +48,7 @@ pub fn solve_second(input: &str) -> usize {
         .parse::<u64>()
         .unwrap();
 
-    (0..time)
-        .filter(|held| (time - held) * held > distance)
-        .count()
+    solve(time, distance)
 }
 
 #[test]
