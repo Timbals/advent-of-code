@@ -1,6 +1,5 @@
 use num::Integer;
 use std::collections::HashMap;
-use std::io::BufRead;
 
 pub fn solve_first(input: &str) -> usize {
     let mut lines = input.lines();
@@ -58,7 +57,7 @@ pub fn solve_second(input: &str) -> usize {
         })
         .collect::<HashMap<_, _>>();
 
-    let mut current = network
+    let current = network
         .keys()
         .copied()
         .filter(|node| node.ends_with('A'))
