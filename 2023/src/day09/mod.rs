@@ -1,13 +1,20 @@
 use itertools::Itertools;
+use std::collections::VecDeque;
+use std::ops::{Add, Sub};
 
-pub fn solve_first(input: &str) -> isize {
+fn solve(
+    input: &str,
+    push: fn(&mut VecDeque<isize>, isize),
+    access: fn(&VecDeque<isize>) -> Option<&isize>,
+    combine: fn(isize, isize) -> isize,
+) -> isize {
     input
         .lines()
         .map(|line| {
             let sequence = line
                 .split_whitespace()
                 .map(|x| x.parse::<isize>().unwrap())
-                .collect::<Vec<_>>();
+                .collect::<VecDeque<_>>();
 
             let mut sequences = vec![sequence];
             while !sequences.last().unwrap().iter().all(|&x| x == 0) {
@@ -22,48 +29,26 @@ pub fn solve_first(input: &str) -> isize {
                 );
             }
 
-            sequences.last_mut().unwrap().push(0);
+            push(sequences.last_mut().unwrap(), 0);
             for i in (1..sequences.len()).rev() {
-                let next_value = sequences[i - 1].last().unwrap() + sequences[i].last().unwrap();
-                sequences[i - 1].push(next_value);
+                let next_value = combine(
+                    *access(&sequences[i - 1]).unwrap(),
+                    *access(&sequences[i]).unwrap(),
+                );
+                push(&mut sequences[i - 1], next_value);
             }
 
-            *sequences.first().unwrap().last().unwrap()
+            *access(sequences.first().unwrap()).unwrap()
         })
         .sum()
 }
 
+pub fn solve_first(input: &str) -> isize {
+    solve(input, VecDeque::push_back, VecDeque::back, isize::add)
+}
+
 pub fn solve_second(input: &str) -> isize {
-    input
-        .lines()
-        .map(|line| {
-            let sequence = line
-                .split_whitespace()
-                .map(|x| x.parse::<isize>().unwrap())
-                .collect::<Vec<_>>();
-
-            let mut sequences = vec![sequence];
-            while !sequences.last().unwrap().iter().all(|&x| x == 0) {
-                sequences.push(
-                    sequences
-                        .last()
-                        .unwrap()
-                        .iter()
-                        .tuple_windows()
-                        .map(|(x, y)| y - x)
-                        .collect(),
-                );
-            }
-
-            sequences.last_mut().unwrap().insert(0, 0);
-            for i in (1..sequences.len()).rev() {
-                let next_value = sequences[i - 1].first().unwrap() - sequences[i].first().unwrap();
-                sequences[i - 1].insert(0, next_value);
-            }
-
-            *sequences.first().unwrap().first().unwrap()
-        })
-        .sum()
+    solve(input, VecDeque::push_front, VecDeque::front, isize::sub)
 }
 
 #[test]
