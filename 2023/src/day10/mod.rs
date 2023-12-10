@@ -1,198 +1,78 @@
 use std::collections::HashSet;
 
-pub fn solve_first(input: &str) -> usize {
-    let grid = input
-        .lines()
-        .map(|line| line.chars().collect::<Vec<_>>())
-        .collect::<Vec<_>>();
-    let mut start = (0, 0);
-    for (y, row) in grid.iter().enumerate() {
-        for (x, c) in row.iter().enumerate() {
-            if *c == 'S' {
-                start = (x, y);
-            }
-        }
-    }
-
-    'outer: for (start_tile, start_from) in [
-        ('|', 'S'),
-        ('-', 'W'),
-        ('L', 'E'),
-        ('J', 'W'),
-        ('7', 'W'),
-        ('F', 'E'),
-    ] {
-        println!("testing {start_tile} {start_from}");
-
-        let mut count = 0;
-
-        let mut current = start;
-        let mut tile = start_tile;
-        let mut from = start_from;
-        while current != start || count == 0 {
-            println!("{current:?}, {tile:?} {from:?}");
-            if tile == '.' {
-                continue 'outer;
-            }
-
-            if count >= grid.len() * grid[0].len() {
-                continue 'outer;
-            }
-
-            let (dx, dy) = match (tile, from) {
-                ('|', 'S') => (0, -1),
-                ('|', 'N') => (0, 1),
-                ('-', 'W') => (1, 0),
-                ('-', 'E') => (-1, 0),
-                ('L', 'E') => (0, -1),
-                ('L', 'N') => (1, 0),
-                ('J', 'W') => (0, -1),
-                ('J', 'N') => (-1, 0),
-                ('7', 'W') => (0, 1),
-                ('7', 'S') => (-1, 0),
-                ('F', 'E') => (0, 1),
-                ('F', 'S') => (1, 0),
-                _ => continue 'outer,
-            };
-            current.0 = current.0.wrapping_add_signed(dx);
-            current.1 = current.1.wrapping_add_signed(dy);
-            tile = if let Some(&tile) = grid.get(current.1).and_then(|x| x.get(current.0)) {
-                tile
-            } else {
-                continue 'outer;
-            };
-            from = match (dx, dy) {
-                (0, 1) => 'N',
-                (0, -1) => 'S',
-                (1, 0) => 'W',
-                (-1, 0) => 'E',
-                _ => unreachable!("{dx} {dy}"),
-            };
-            count += 1;
-        }
-
-        return count / 2;
-    }
-
-    unreachable!()
-}
-
-pub fn solve_second(input: &str) -> usize {
+fn find_loop(input: &str) -> (HashSet<(usize, usize)>, Vec<Vec<char>>) {
     let mut grid = input
         .lines()
         .map(|line| line.chars().collect::<Vec<_>>())
         .collect::<Vec<_>>();
-    let mut start = (0, 0);
-    for (y, row) in grid.iter().enumerate() {
-        for (x, c) in row.iter().enumerate() {
-            if *c == 'S' {
-                start = (x, y);
-            }
-        }
-    }
 
-    let mut loop_tiles = HashSet::new();
-    let mut final_start_tile = ' ';
-    'outer: for (start_tile, start_from) in [
-        ('|', 'S'),
-        ('-', 'W'),
-        ('L', 'E'),
-        ('J', 'W'),
-        ('7', 'W'),
-        ('F', 'E'),
-    ] {
-        println!("testing {start_tile} {start_from}");
+    let start = grid
+        .iter()
+        .enumerate()
+        .flat_map(|(y, row)| row.iter().enumerate().map(move |(x, c)| ((x, y), c)))
+        .find(|&(_, &c)| c == 'S')
+        .map(|((x, y), _)| (x, y))
+        .expect("no start tile found");
 
-        let mut count = 0;
+    let loop_tiles = [
+        ('|', (0, -1)),
+        ('-', (1, 0)),
+        ('L', (-1, 0)),
+        ('J', (1, 0)),
+        ('7', (1, 0)),
+        ('F', (-1, 0)),
+    ]
+    .into_iter()
+    .find_map(|(tile, (mut dx, mut dy))| {
+        grid[start.1][start.0] = tile;
 
-        loop_tiles.clear();
         let mut current = start;
-        let mut tile = start_tile;
-        let mut from = start_from;
-        while current != start || count == 0 {
+        let mut loop_tiles = HashSet::new();
+        loop {
+            (dx, dy) = match grid.get(current.1).and_then(|x| x.get(current.0)) {
+                Some('|') if dx == 0 => (0, dy),
+                Some('-') if dy == 0 => (dx, 0),
+                Some('L') if dx < 0 || dy > 0 => (dy, dx),
+                Some('J') if dx > 0 || dy > 0 => (-dy, -dx),
+                Some('7') if dx > 0 || dy < 0 => (dy, dx),
+                Some('F') if dx < 0 || dy < 0 => (-dy, -dx),
+                _ => break None,
+            };
+
+            current.0 = current.0.checked_add_signed(dx)?;
+            current.1 = current.1.checked_add_signed(dy)?;
+
             loop_tiles.insert(current);
 
-            if tile == '.' {
-                continue 'outer;
+            if current == start {
+                break Some(loop_tiles);
             }
-
-            if count >= grid.len() * grid[0].len() {
-                continue 'outer;
-            }
-
-            let (dx, dy) = match (tile, from) {
-                ('|', 'S') => (0, -1),
-                ('|', 'N') => (0, 1),
-                ('-', 'W') => (1, 0),
-                ('-', 'E') => (-1, 0),
-                ('L', 'E') => (0, -1),
-                ('L', 'N') => (1, 0),
-                ('J', 'W') => (0, -1),
-                ('J', 'N') => (-1, 0),
-                ('7', 'W') => (0, 1),
-                ('7', 'S') => (-1, 0),
-                ('F', 'E') => (0, 1),
-                ('F', 'S') => (1, 0),
-                _ => continue 'outer,
-            };
-            current.0 = current.0.wrapping_add_signed(dx);
-            current.1 = current.1.wrapping_add_signed(dy);
-            tile = if let Some(&tile) = grid.get(current.1).and_then(|x| x.get(current.0)) {
-                tile
-            } else {
-                continue 'outer;
-            };
-            from = match (dx, dy) {
-                (0, 1) => 'N',
-                (0, -1) => 'S',
-                (1, 0) => 'W',
-                (-1, 0) => 'E',
-                _ => unreachable!("{dx} {dy}"),
-            };
-            count += 1;
         }
+    })
+    .expect("no valid loop found");
 
-        final_start_tile = match (from, start_from) {
-            ('N', 'N') => '|',
-            ('W', 'W') => '-',
-            ('N', 'W') => 'L',
-            ('N', 'E') => 'J',
-            ('S', 'E') => '7',
-            ('S', 'W') => 'F',
-            _ => unreachable!("{from}, {start_from}"),
-        };
-        break;
-    }
+    (loop_tiles, grid)
+}
 
-    grid[start.1][start.0] = final_start_tile;
+pub fn solve_first(input: &str) -> usize {
+    find_loop(input).0.len() / 2
+}
+
+pub fn solve_second(input: &str) -> usize {
+    let (loop_tiles, grid) = find_loop(input);
 
     let mut count = 0;
     for (y, row) in grid.iter().enumerate() {
         let mut inside = false;
-        let mut entering = ' ';
+        let mut last = ' ';
         for (x, c) in row.iter().enumerate() {
             if loop_tiles.contains(&(x, y)) {
-                if *c == '|' {
-                    inside = !inside;
+                if *c == '|' || (last == 'L' && *c == '7') || (last == 'F' && *c == 'J') {
+                    inside = !inside; // "|", "L---7" and "F---J" change parity
+                } else if *c != '-' {
+                    last = *c;
                 }
-
-                if entering == 'L' && *c == '7' {
-                    inside = !inside;
-                }
-
-                if entering == 'F' && *c == 'J' {
-                    inside = !inside;
-                }
-
-                if *c != '-' {
-                    entering = *c;
-                }
-            }
-
-            println!("{x} {y} {inside}");
-
-            if inside && !loop_tiles.contains(&(x, y)) {
-                println!("counting");
+            } else if inside {
                 count += 1;
             }
         }
