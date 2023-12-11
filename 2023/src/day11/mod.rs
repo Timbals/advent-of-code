@@ -1,6 +1,5 @@
-use itertools::iproduct;
+use itertools::Itertools;
 use std::cmp::{max, min};
-use std::collections::HashSet;
 
 pub fn solve(input: &str, multiplier: usize) -> usize {
     let grid = input
@@ -8,18 +7,21 @@ pub fn solve(input: &str, multiplier: usize) -> usize {
         .map(|line| line.chars().collect::<Vec<_>>())
         .collect::<Vec<_>>();
 
+    let cum_sum = |acc: &mut usize, x| {
+        *acc += x as usize;
+        Some(*acc)
+    };
     let empty_rows = grid
         .iter()
-        .enumerate()
-        .filter(|(_, row)| row.iter().all(|&c| c == '.'))
-        .map(|(y, _)| y)
-        .collect::<HashSet<_>>();
+        .map(|row| row.iter().all(|&c| c == '.'))
+        .scan(0, cum_sum)
+        .collect::<Vec<_>>();
     let empty_columns = (0..grid[0].len())
-        .filter(|&i| grid.iter().all(|row| row[i] == '.'))
-        .collect::<HashSet<_>>();
+        .map(|i| grid.iter().all(|row| row[i] == '.'))
+        .scan(0, cum_sum)
+        .collect::<Vec<_>>();
 
-    let galaxies = grid
-        .iter()
+    grid.iter()
         .enumerate()
         .flat_map(|(y, row)| {
             row.iter()
@@ -27,24 +29,13 @@ pub fn solve(input: &str, multiplier: usize) -> usize {
                 .filter(|(_, c)| **c == '#')
                 .map(move |(x, _)| (x, y))
         })
-        .collect::<Vec<_>>();
-
-    iproduct!(galaxies.iter(), galaxies.iter())
+        .tuple_combinations()
         .map(|((x1, y1), (x2, y2))| {
-            let empties = (min(*x1, *x2)..max(*x1, *x2))
-                .filter(|x| empty_columns.contains(x))
-                .count()
-                + (min(*y1, *y2)..max(*y1, *y2))
-                    .filter(|y| empty_rows.contains(y))
-                    .count();
-
-            ((x1, y1), (x2, y2), empties)
+            let empty_columns = empty_columns[max(x1, x2)] - empty_columns[min(x1, x2)];
+            let empty_rows = empty_rows[max(y1, y2)] - empty_rows[min(y1, y2)];
+            x1.abs_diff(x2) + y1.abs_diff(y2) + (empty_columns + empty_rows) * (multiplier - 1)
         })
-        .map(|((x1, y1), (x2, y2), empties)| {
-            x1.abs_diff(*x2) + y1.abs_diff(*y2) + empties * (multiplier - 1)
-        })
-        .sum::<usize>()
-        / 2
+        .sum()
 }
 
 pub fn solve_first(input: &str) -> usize {
@@ -59,6 +50,7 @@ pub fn solve_second(input: &str) -> usize {
 pub fn sample() {
     let sample = include_str!("sample.txt");
     assert_eq!(374, solve_first(sample));
+    assert_eq!(1030, solve(sample, 10));
     assert_eq!(8410, solve(sample, 100));
 }
 
