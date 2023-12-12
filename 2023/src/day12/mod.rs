@@ -1,6 +1,5 @@
-use itertools::Itertools;
+use itertools::{repeat_n, Itertools};
 use std::collections::HashMap;
-use std::iter::repeat;
 
 pub fn solve(input: &str, repeat_count: usize) -> usize {
     input
@@ -8,110 +7,57 @@ pub fn solve(input: &str, repeat_count: usize) -> usize {
         .map(|line| {
             let (springs, groups) = line.split_once(' ').unwrap();
 
-            let springs = repeat(springs).take(repeat_count).join("?");
-            let groups = repeat(groups).take(repeat_count).join(",");
-
-            let springs = springs
+            let springs = repeat_n(springs, repeat_count)
+                .join("?")
                 .chars()
-                .map(|c| match c {
-                    '.' => Some(false), // operational
-                    '#' => Some(true),  // damaged
-                    '?' => None,        // unknown
-                    _ => unreachable!(),
-                })
                 .collect::<Vec<_>>();
-            let runs = groups
+            let runs = repeat_n(groups, repeat_count)
+                .join(",")
                 .split(',')
                 .map(|x| x.parse::<usize>().unwrap())
                 .collect::<Vec<_>>();
 
             let mut cache = HashMap::new();
 
-            fn arrangements(
-                index: usize,
-                mut run_index: usize,
-                run_size: Option<usize>,
-                springs: &[Option<bool>],
-                runs: &[usize],
-                cache: &mut HashMap<(usize, usize, Option<usize>), usize>,
-            ) -> usize {
-                if index >= springs.len() {
-                    if let Some(run_size) = run_size {
-                        if run_index < runs.len() && runs[run_index] == run_size {
-                            run_index += 1;
-                        } else {
-                            return 0;
-                        }
-                    }
-
-                    if run_index != runs.len() {
-                        return 0;
-                    }
-
-                    return 1;
-                }
-
-                if let Some(&x) = cache.get(&(index, run_index, run_size)) {
-                    return x;
-                }
-
-                let res = match (springs[index], run_size) {
-                    (Some(false), None) => {
-                        arrangements(index + 1, run_index, run_size, springs, runs, cache)
-                    }
-                    (Some(true), None) if run_index < runs.len() => {
-                        arrangements(index + 1, run_index, Some(1), springs, runs, cache)
-                    }
-                    (None, None) => {
-                        arrangements(index + 1, run_index, run_size, springs, runs, cache)
-                            + if run_index < runs.len() {
-                                arrangements(index + 1, run_index, Some(1), springs, runs, cache)
-                            } else {
-                                0
-                            }
-                    }
-                    (Some(false), Some(run_size))
-                        if run_index < runs.len() && runs[run_index] == run_size =>
-                    {
-                        arrangements(index + 1, run_index + 1, None, springs, runs, cache)
-                    }
-                    (Some(true), Some(run_size)) if run_size < runs[run_index] => arrangements(
-                        index + 1,
-                        run_index,
-                        Some(run_size + 1),
-                        springs,
-                        runs,
-                        cache,
-                    ),
-                    (None, Some(run_size)) => {
-                        let mut tmp = 0;
-                        if run_size < runs[run_index] {
-                            tmp += arrangements(
-                                index + 1,
-                                run_index,
-                                Some(run_size + 1),
-                                springs,
-                                runs,
-                                cache,
-                            );
-                        }
-                        if run_index < runs.len() && runs[run_index] == run_size {
-                            tmp +=
-                                arrangements(index + 1, run_index + 1, None, springs, runs, cache);
-                        }
-                        tmp
-                    }
-                    _ => 0,
-                };
-
-                cache.insert((index, run_index, run_size), res);
-
-                res
-            }
-
-            arrangements(0, 0, None, &springs, &runs, &mut cache)
+            arrangements(&springs, &runs, None, &mut cache)
         })
         .sum()
+}
+
+fn arrangements(
+    springs: &[char],
+    runs: &[usize],
+    run_size: Option<usize>,
+    cache: &mut HashMap<(*const char, *const usize, Option<usize>), usize>,
+) -> usize {
+    if springs.is_empty() && run_size.is_none() {
+        return runs.is_empty() as usize;
+    }
+
+    if let Some(&count) = cache.get(&(springs.as_ptr(), runs.as_ptr(), run_size)) {
+        return count;
+    }
+
+    let mut count = 0;
+    if let Some(run_size) = run_size {
+        if (springs.is_empty() || springs[0] == '.' || springs[0] == '?') && runs[0] == run_size {
+            count += arrangements(&springs[1.min(springs.len())..], &runs[1..], None, cache);
+        }
+        if !springs.is_empty() && (springs[0] == '#' || springs[0] == '?') && run_size < runs[0] {
+            count += arrangements(&springs[1..], runs, Some(run_size + 1), cache);
+        }
+    } else {
+        if springs[0] == '.' || springs[0] == '?' {
+            count += arrangements(&springs[1..], runs, run_size, cache);
+        }
+        if (springs[0] == '#' || springs[0] == '?') && !runs.is_empty() {
+            count += arrangements(&springs[1..], runs, Some(1), cache);
+        }
+    }
+
+    cache.insert((springs.as_ptr(), runs.as_ptr(), run_size), count);
+
+    count
 }
 
 pub fn solve_first(input: &str) -> usize {
