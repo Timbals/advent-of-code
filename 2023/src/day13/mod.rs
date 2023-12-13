@@ -1,112 +1,52 @@
-use itertools::equal;
 use std::cmp::min;
+use std::iter::zip;
 
-pub fn solve_first(input: &str) -> usize {
+pub fn solve(input: &str, defects: usize) -> usize {
     input
         .split("\n\n")
         .map(|pattern| {
             let rows = pattern
                 .lines()
-                .map(|line| line.chars().collect::<Vec<_>>())
+                .map(|line| line.chars().map(|x| x == '#').collect::<Vec<_>>())
                 .collect::<Vec<_>>();
 
-            for row in 1..rows.len() {
-                let (left, right) = rows.split_at(row);
-                let len = min(left.len(), right.len());
+            let find_mirror = |data: &Vec<Vec<bool>>| -> Option<usize> {
+                for index in 1..data.len() {
+                    let (left, right) = data.split_at(index);
+                    let len = min(left.len(), right.len());
 
-                if equal(left.iter().rev().take(len), right.iter().take(len)) {
-                    return 100 * row;
+                    if zip(
+                        left.iter().rev().take(len).flatten(),
+                        right.iter().take(len).flatten(),
+                    )
+                    .filter(|(a, b)| a != b)
+                    .count()
+                        == defects
+                    {
+                        return Some(index);
+                    }
                 }
+                None
+            };
+
+            if let Some(row) = find_mirror(&rows) {
+                row * 100
+            } else {
+                let columns = (0..rows[0].len())
+                    .map(|column| rows.iter().map(|row| row[column]).collect::<Vec<_>>())
+                    .collect::<Vec<_>>();
+                find_mirror(&columns).unwrap()
             }
-
-            let columns = (0..rows[0].len())
-                .map(|column| rows.iter().map(|row| row[column]).collect::<Vec<_>>())
-                .collect::<Vec<_>>();
-
-            for column in 1..columns.len() {
-                let (left, right) = columns.split_at(column);
-                let len = min(left.len(), right.len());
-
-                if equal(left.iter().rev().take(len), right.iter().take(len)) {
-                    return column;
-                }
-            }
-
-            unreachable!()
         })
         .sum()
 }
 
+pub fn solve_first(input: &str) -> usize {
+    solve(input, 0)
+}
+
 pub fn solve_second(input: &str) -> usize {
-    input
-        .split("\n\n")
-        .map(|pattern| {
-            let mut rows = pattern
-                .lines()
-                .map(|line| line.chars().map(|x| x == '#').collect::<Vec<_>>())
-                .collect::<Vec<_>>();
-
-            let mut original = 0;
-
-            for row in 1..rows.len() {
-                let (left, right) = rows.split_at(row);
-                let len = min(left.len(), right.len());
-
-                if equal(left.iter().rev().take(len), right.iter().take(len)) {
-                    original = 100 * row;
-                }
-            }
-
-            let columns = (0..rows[0].len())
-                .map(|column| rows.iter().map(|row| row[column]).collect::<Vec<_>>())
-                .collect::<Vec<_>>();
-
-            for column in 1..columns.len() {
-                let (left, right) = columns.split_at(column);
-                let len = min(left.len(), right.len());
-
-                if equal(left.iter().rev().take(len), right.iter().take(len)) {
-                    original = column;
-                }
-            }
-
-            for row in 0..rows.len() {
-                for column in 0..rows[0].len() {
-                    rows[row][column] = !rows[row][column];
-
-                    for row in 1..rows.len() {
-                        let (left, right) = rows.split_at(row);
-                        let len = min(left.len(), right.len());
-
-                        if equal(left.iter().rev().take(len), right.iter().take(len)) {
-                            if 100 * row != original {
-                                return 100 * row;
-                            }
-                        }
-                    }
-
-                    let columns = (0..rows[0].len())
-                        .map(|column| rows.iter().map(|row| row[column]).collect::<Vec<_>>())
-                        .collect::<Vec<_>>();
-
-                    for column in 1..columns.len() {
-                        let (left, right) = columns.split_at(column);
-                        let len = min(left.len(), right.len());
-
-                        if equal(left.iter().rev().take(len), right.iter().take(len)) {
-                            if column != original {
-                                return column;
-                            }
-                        }
-                    }
-
-                    rows[row][column] = !rows[row][column];
-                }
-            }
-
-            unreachable!()
-        })
-        .sum()
+    solve(input, 1)
 }
 
 #[test]
