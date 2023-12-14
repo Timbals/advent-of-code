@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::mem::swap;
 
 pub fn solve_first(input: &str) -> usize {
     let grid = input
@@ -31,132 +30,64 @@ pub fn solve_first(input: &str) -> usize {
 pub fn solve_second(input: &str) -> usize {
     let mut grid = input
         .lines()
-        .map(|line| line.chars().collect::<Vec<_>>())
+        .flat_map(|line| line.chars().collect::<Vec<_>>())
         .collect::<Vec<_>>();
 
-    let mut next_grid = grid.clone();
+    let width = input.lines().next().unwrap().len();
+    let height = input.lines().count();
 
     let mut seen = HashMap::new();
 
+    let rounds = 1000000000;
+
     let mut index = 0;
-    while index < 1000000000 {
-        swap(&mut grid, &mut next_grid);
-        for column in 0..next_grid[0].len() {
-            for row in &mut next_grid {
-                if row[column] == 'O' {
-                    row[column] = '.';
-                }
-            }
-        }
-
-        for column in 0..grid[0].len() {
-            let mut next_load = 0;
-            for (row_index, row) in grid.iter().enumerate() {
-                match row[column] {
-                    'O' => {
-                        next_grid[next_load][column] = 'O';
-                        next_load += 1;
-                    }
-                    '#' => {
-                        next_load = row_index + 1;
-                    }
-                    _ => {}
-                }
-            }
-        }
-
-        swap(&mut grid, &mut next_grid);
-        for column in 0..next_grid[0].len() {
-            for row in &mut next_grid {
-                if row[column] == 'O' {
-                    row[column] = '.';
-                }
-            }
-        }
-
-        for row in 0..grid.len() {
-            let mut next_load = 0;
-            for column in 0..grid[0].len() {
-                match grid[row][column] {
-                    'O' => {
-                        next_grid[row][next_load] = 'O';
-                        next_load += 1;
-                    }
-                    '#' => {
-                        next_load = column + 1;
-                    }
-                    _ => {}
-                }
-            }
-        }
-
-        swap(&mut grid, &mut next_grid);
-        for column in 0..next_grid[0].len() {
-            for row in &mut next_grid {
-                if row[column] == 'O' {
-                    row[column] = '.';
-                }
-            }
-        }
-
-        for column in 0..grid[0].len() {
-            let mut next_load = grid.len() - 1;
-            for row in (0..grid.len()).rev() {
-                match grid[row][column] {
-                    'O' => {
-                        next_grid[next_load][column] = 'O';
-                        next_load = next_load.saturating_sub(1);
-                    }
-                    '#' => {
-                        next_load = row.saturating_sub(1);
-                    }
-                    _ => {}
-                }
-            }
-        }
-
-        swap(&mut grid, &mut next_grid);
-        for column in 0..next_grid[0].len() {
-            for row in &mut next_grid {
-                if row[column] == 'O' {
-                    row[column] = '.';
-                }
-            }
-        }
-
-        for row in 0..grid.len() {
-            let mut next_load = grid[0].len() - 1;
-            for column in (0..grid[0].len()).rev() {
-                match grid[row][column] {
-                    'O' => {
-                        next_grid[row][next_load] = 'O';
-                        next_load = next_load.saturating_sub(1);
-                    }
-                    '#' => {
-                        next_load = column.saturating_sub(1);
-                    }
-                    _ => {}
-                }
-            }
-        }
-
+    while index < rounds {
         index += 1;
 
-        if let Some(old_index) = seen.insert(next_grid.clone(), index) {
+        for _ in 0..4 {
+            for x in 0..width {
+                let mut next_y = 0;
+                for y in 0..height {
+                    match grid[x + y * width] {
+                        'O' => {
+                            grid[x + y * width] = '.';
+                            grid[x + next_y * width] = 'O';
+                            next_y += 1;
+                        }
+                        '#' => {
+                            next_y = y + 1;
+                        }
+                        _ => {}
+                    }
+                }
+            }
+
+            // rotate clockwise by flipping twice (first along a vertical than along a diagonal)
+            for y in 0..height {
+                for x in 0..(width / 2) {
+                    grid.swap(x + y * width, (width - x - 1) + y * width);
+                }
+            }
+            for y in 0..height {
+                for x in 0..(height - y - 1) {
+                    grid.swap(x + y * width, (height - y - 1) + (width - x - 1) * width);
+                }
+            }
+        }
+
+        if let Some(old_index) = seen.insert(grid.clone(), index) {
             let cycle_length = old_index - index;
-            let remaining = 1000000000 - index;
+            let remaining = rounds - index;
             let cycle_count = remaining / cycle_length;
             index += cycle_count * cycle_length;
         }
     }
 
-    swap(&mut grid, &mut next_grid);
-
     let mut load = 0;
-    for column in 0..grid[0].len() {
-        for row in 0..grid.len() {
-            if grid[row][column] == 'O' {
-                load += grid.len() - row;
+    for x in 0..width {
+        for y in 0..height {
+            if grid[x + y * width] == 'O' {
+                load += height - y;
             }
         }
     }
