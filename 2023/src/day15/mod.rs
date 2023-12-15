@@ -1,44 +1,33 @@
 use std::array::from_fn;
 
+fn hash(data: &str) -> usize {
+    data.bytes()
+        .fold(0_u8, |acc, c| acc.wrapping_add(c).wrapping_mul(17)) as usize
+}
+
 pub fn solve_first(input: &str) -> usize {
-    input
-        .split(',')
-        .map(|string| {
-            string
-                .bytes()
-                .fold(0_u8, |acc, c| acc.wrapping_add(c).wrapping_mul(17)) as usize
-        })
-        .sum()
+    input.split(',').map(hash).sum()
 }
 
 pub fn solve_second(input: &str) -> usize {
     let mut boxes: [Vec<_>; 256] = from_fn(|_| Vec::new());
 
-    for (label, focal_length, hash) in input.split(',').map(|string| {
-        let step = string.as_bytes();
-        let (label, focal_length) = if step.last().unwrap() == &b'-' {
-            (&step[..step.len() - 1], None)
-        } else {
-            (&step[..step.len() - 2], Some(step[step.len() - 1] - b'0'))
+    for step in input.split(',') {
+        let (label, focal) = match step.trim_end_matches('-').split_once('=') {
+            Some((label, focal)) => (label, Some(focal.parse::<usize>().unwrap())),
+            None => (&step[..step.len() - 1], None),
         };
-        let hash = label
-            .iter()
-            .fold(0_u8, |acc, &c| acc.wrapping_add(c).wrapping_mul(17));
+        let hash = hash(label);
 
-        (label, focal_length, hash)
-    }) {
-        let boxx = &mut boxes[hash as usize];
-        let pos = boxx.iter().position(|(l, _)| l == &label);
-
-        match (pos, focal_length) {
-            (Some(pos), Some(focal_length)) => {
-                boxx[pos].1 = focal_length;
+        match (boxes[hash].iter().position(|(l, _)| l == &label), focal) {
+            (Some(pos), Some(focal)) => {
+                boxes[hash][pos].1 = focal;
             }
-            (None, Some(focal_length)) => {
-                boxx.push((label, focal_length));
+            (None, Some(focal)) => {
+                boxes[hash].push((label, focal));
             }
             (Some(pos), None) => {
-                boxx.remove(pos);
+                boxes[hash].remove(pos);
             }
             _ => {}
         }
@@ -50,9 +39,7 @@ pub fn solve_second(input: &str) -> usize {
         .flat_map(|(box_number, boxx)| {
             boxx.into_iter()
                 .enumerate()
-                .map(move |(slot, (_, focal_length))| {
-                    (box_number + 1) * (slot + 1) * (focal_length as usize)
-                })
+                .map(move |(slot, (_, focal))| (box_number + 1) * (slot + 1) * focal)
         })
         .sum()
 }
