@@ -1,7 +1,34 @@
 use std::cmp::Reverse;
-use std::collections::{BinaryHeap, HashSet};
+use std::collections::BinaryHeap;
 
-pub fn solve_first(input: &str) -> usize {
+struct Cache {
+    x_stride: usize,
+    y_stride: usize,
+    dir_stride: usize,
+    data: Vec<bool>,
+}
+
+impl Cache {
+    fn new(width: usize, height: usize, max_move: usize) -> Self {
+        let directions = 4;
+        Self {
+            x_stride: height * directions * (max_move + 1),
+            y_stride: directions * (max_move + 1),
+            dir_stride: max_move + 1,
+            data: vec![false; width * height * directions * (max_move + 1)],
+        }
+    }
+
+    fn insert(&mut self, x: usize, y: usize, dir: usize, consecutive: usize) -> bool {
+        std::mem::replace(
+            &mut self.data
+                [x * self.x_stride + y * self.y_stride + dir * self.dir_stride + consecutive],
+            true,
+        )
+    }
+}
+
+pub fn solve(input: &str, min_move: usize, max_move: usize) -> usize {
     let grid = input
         .lines()
         .map(|line| {
@@ -18,10 +45,10 @@ pub fn solve_first(input: &str) -> usize {
     // (heat, x, y, last_dir, consecutive)
     heap.push(Reverse((0, 0, 0, 0, 0)));
 
-    let mut seen = HashSet::new();
+    let mut seen = Cache::new(width, height, max_move);
 
     while let Some(Reverse((heat, x, y, last_dir, consecutive))) = heap.pop() {
-        if (x == width - 1) && (y == height - 1) {
+        if (x == width - 1) && (y == height - 1) && consecutive >= min_move {
             return heat;
         }
 
@@ -36,6 +63,7 @@ pub fn solve_first(input: &str) -> usize {
             .enumerate()
             .filter(|(_, (x, y))| *x < width && *y < height) // bounds check
             .filter(|(dir, _)| *dir != (last_dir + 2) % 4) // can't turn back
+            .filter(|(dir, _)| *dir == last_dir || consecutive >= min_move) // move at least `min_move` blocks in one direction
             .map(|(dir, coords)| {
                 if dir == last_dir {
                     (dir, coords, consecutive + 1)
@@ -43,65 +71,21 @@ pub fn solve_first(input: &str) -> usize {
                     (dir, coords, 1)
                 }
             })
-            .filter(|(_, _, consecutive)| *consecutive <= 3) // at most 3 blocks in one direction
-            .filter(|(dir, (x, y), consecutive)| seen.insert((*x, *y, *dir, *consecutive)))
+            .filter(|(_, _, consecutive)| *consecutive <= max_move) // at most `max_move` blocks in one direction
+            .filter(|(dir, (x, y), consecutive)| !seen.insert(*x, *y, *dir, *consecutive))
             .map(|(dir, (x, y), consecutive)| Reverse((heat + grid[y][x], x, y, dir, consecutive))),
         )
     }
 
-    unreachable!()
+    unreachable!("no valid path")
+}
+
+pub fn solve_first(input: &str) -> usize {
+    solve(input, 0, 3)
 }
 
 pub fn solve_second(input: &str) -> usize {
-    let grid = input
-        .lines()
-        .map(|line| {
-            line.chars()
-                .map(|c| c.to_digit(10).unwrap() as usize)
-                .collect::<Vec<_>>()
-        })
-        .collect::<Vec<_>>();
-
-    let width = grid[0].len();
-    let height = grid.len();
-
-    let mut heap = BinaryHeap::<Reverse<(usize, usize, usize, usize, usize)>>::new();
-    // (heat, x, y, last_direction, consecutive)
-    heap.push(Reverse((0, 0, 0, 0, 0)));
-
-    let mut seen = HashSet::new();
-
-    while let Some(Reverse((heat, x, y, last_dir, consecutive))) = heap.pop() {
-        if (x == width - 1) && (y == height - 1) && consecutive >= 4 {
-            return heat;
-        }
-
-        heap.extend(
-            [
-                (x + 1, y),
-                (x, y + 1),
-                (x.wrapping_sub(1), y),
-                (x, y.wrapping_sub(1)),
-            ]
-            .into_iter()
-            .enumerate()
-            .filter(|(_, (x, y))| *x < width && *y < height) // bounds check
-            .filter(|(dir, _)| *dir != (last_dir + 2) % 4) // can't turn back
-            .filter(|(dir, _)| *dir == last_dir || consecutive >= 4) // move at least 4 blocks
-            .map(|(dir, coords)| {
-                if dir == last_dir {
-                    (dir, coords, consecutive + 1)
-                } else {
-                    (dir, coords, 1)
-                }
-            })
-            .filter(|(_, _, consecutive)| *consecutive <= 10) // at most 10 blocks in one direction
-            .filter(|(dir, (x, y), consecutive)| seen.insert((*x, *y, *dir, *consecutive)))
-            .map(|(dir, (x, y), consecutive)| Reverse((heat + grid[y][x], x, y, dir, consecutive))),
-        )
-    }
-
-    unreachable!()
+    solve(input, 4, 10)
 }
 
 #[test]
