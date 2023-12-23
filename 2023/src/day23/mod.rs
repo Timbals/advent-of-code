@@ -4,10 +4,8 @@ pub fn solve(input: &str, slopes: bool) -> usize {
         .map(|line| line.chars().collect::<Vec<_>>())
         .collect::<Vec<_>>();
 
-    let start = (1_usize, 0_usize);
-
     let mut stack = Vec::new();
-    stack.push((0, start));
+    stack.push((0, (1, 0)));
 
     let mut on_path = grid
         .iter()
