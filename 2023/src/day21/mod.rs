@@ -118,12 +118,5 @@ pub fn sample() {
 pub fn input() {
     let input = include_str!("input.txt");
     assert_eq!(3600, solve_first(input, 64));
-
-    // println!("{}", solve_second(input, 65 + 131 * 0));
-    // println!("{}", solve_second(input, 65 + 131 * 1));
-    // println!("{}", solve_second(input, 65 + 131 * 2));
-    let x = 202300;
-    let x: u64 = (26501365 - 65) / 131;
-    println!("{}", 3720 + 14775 * x + 14655 * x * x);
     assert_eq!(599763113936220, solve_second(input));
 }
