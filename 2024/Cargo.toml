@@ -1,0 +1,8 @@
+[package]
+name = "aoc_2024"
+edition = "2021"
+
+[dependencies]
+itertools = "0.13.0"
+num = "0.4.1"
+nalgebra = "0.33.2"
