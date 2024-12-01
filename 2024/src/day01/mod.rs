@@ -1,34 +1,31 @@
-use itertools::Itertools;
+use std::collections::HashMap;
 use std::iter::zip;
 
 pub fn solve_first(input: &str) -> u32 {
     let mut left = Vec::new();
     let mut right = Vec::new();
     for line in input.lines() {
-        let mut line = line.split_whitespace();
-        left.push(line.next().unwrap().parse::<u32>().unwrap());
-        right.push(line.next().unwrap().parse::<u32>().unwrap());
+        let (x, y) = line.split_once("   ").unwrap();
+        left.push(x.parse::<u32>().unwrap());
+        right.push(y.parse::<u32>().unwrap());
     }
 
     left.sort_unstable();
     right.sort_unstable();
 
-    zip(left, right).map(|(x, y)| x.abs_diff(y)).sum()
+    zip(left, right).map(|(x, y)| u32::abs_diff(x, y)).sum()
 }
 
 pub fn solve_second(input: &str) -> u32 {
     let mut left = Vec::new();
-    let mut right = Vec::new();
+    let mut right = HashMap::new();
     for line in input.lines() {
-        let mut line = line.split_whitespace();
-        left.push(line.next().unwrap().parse::<u32>().unwrap());
-        right.push(line.next().unwrap().parse::<u32>().unwrap());
+        let (x, y) = line.split_once("   ").unwrap();
+        left.push(x.parse::<u32>().unwrap());
+        *right.entry(y.parse::<u32>().unwrap()).or_default() += 1;
     }
 
-    let right = right.into_iter().counts();
-    left.into_iter()
-        .map(|x| x * *right.get(&x).unwrap_or(&0) as u32)
-        .sum()
+    left.into_iter().map(|x| x * *right.get(&x).unwrap_or(&0)).sum()
 }
 
 #[test]
