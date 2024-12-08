@@ -1,14 +1,15 @@
 use itertools::Itertools;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
-pub fn solve_first(input: &str) -> usize {
+#[allow(clippy::type_complexity)]
+fn parse(input: &str) -> (isize, isize, HashMap<u8, Vec<(isize, isize)>>) {
     let grid = input.lines().map(|line| line.as_bytes()).collect::<Vec<_>>();
 
     let width = grid[0].len() as isize;
     let height = grid.len() as isize;
 
     let antennas = grid
-        .iter()
+        .into_iter()
         .enumerate()
         .flat_map(|(y, line)| {
             line.iter().enumerate().map(move |(x, b)| (*b, (x as isize, y as isize)))
@@ -16,18 +17,24 @@ pub fn solve_first(input: &str) -> usize {
         .filter(|(b, _)| *b != b'.')
         .into_group_map();
 
+    (width, height, antennas)
+}
+
+pub fn solve_first(input: &str) -> usize {
+    let (width, height, antennas) = parse(input);
+
     let mut antinodes = HashSet::new();
 
-    for (_, antennas) in antennas {
-        for ((x1, y1), (x2, y2)) in antennas.iter().tuple_combinations() {
-            let (x, y) = (x2 + (x2 - x1), y2 + (y2 - y1));
-            if (0..width).contains(&x) && (0..height).contains(&y) {
-                antinodes.insert((x, y));
-            }
-            let (x, y) = (x1 + (x1 - x2), y1 + (y1 - y2));
-            if (0..width).contains(&x) && (0..height).contains(&y) {
-                antinodes.insert((x, y));
-            }
+    for ((x1, y1), (x2, y2)) in
+        antennas.into_values().flat_map(|x| x.into_iter().tuple_combinations())
+    {
+        let (x, y) = (x2 + (x2 - x1), y2 + (y2 - y1));
+        if (0..width).contains(&x) && (0..height).contains(&y) {
+            antinodes.insert((x, y));
+        }
+        let (x, y) = (x1 + (x1 - x2), y1 + (y1 - y2));
+        if (0..width).contains(&x) && (0..height).contains(&y) {
+            antinodes.insert((x, y));
         }
     }
 
@@ -35,37 +42,25 @@ pub fn solve_first(input: &str) -> usize {
 }
 
 pub fn solve_second(input: &str) -> usize {
-    let grid = input.lines().map(|line| line.as_bytes()).collect::<Vec<_>>();
-
-    let width = grid[0].len() as isize;
-    let height = grid.len() as isize;
-
-    let antennas = grid
-        .iter()
-        .enumerate()
-        .flat_map(|(y, line)| {
-            line.iter().enumerate().map(move |(x, b)| (*b, (x as isize, y as isize)))
-        })
-        .filter(|(b, _)| *b != b'.')
-        .into_group_map();
+    let (width, height, antennas) = parse(input);
 
     let mut antinodes = HashSet::new();
 
-    for (_, antennas) in antennas {
-        for ((x1, y1), (x2, y2)) in antennas.iter().tuple_combinations() {
-            let (dx, dy) = (x2 - x1, y2 - y1);
-            let mut i = 0;
-            while (0..width).contains(&(x2 + i * dx)) && (0..height).contains(&(y2 + i * dy)) {
-                antinodes.insert((x2 + i * dx, y2 + i * dy));
-                i += 1;
-            }
+    for ((x1, y1), (x2, y2)) in
+        antennas.into_values().flat_map(|x| x.into_iter().tuple_combinations())
+    {
+        let (dx, dy) = (x2 - x1, y2 - y1);
+        let mut i = 0;
+        while (0..width).contains(&(x2 + i * dx)) && (0..height).contains(&(y2 + i * dy)) {
+            antinodes.insert((x2 + i * dx, y2 + i * dy));
+            i += 1;
+        }
 
-            let (dx, dy) = (x1 - x2, y1 - y2);
-            let mut i = 0;
-            while (0..width).contains(&(x1 + i * dx)) && (0..height).contains(&(y1 + i * dy)) {
-                antinodes.insert((x1 + i * dx, y1 + i * dy));
-                i += 1;
-            }
+        let (dx, dy) = (x1 - x2, y1 - y2);
+        let mut i = 0;
+        while (0..width).contains(&(x1 + i * dx)) && (0..height).contains(&(y1 + i * dy)) {
+            antinodes.insert((x1 + i * dx, y1 + i * dy));
+            i += 1;
         }
     }
 
