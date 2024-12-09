@@ -1,14 +1,17 @@
-use itertools::Itertools;
 use std::collections::VecDeque;
 
 pub fn solve_first(input: &str) -> usize {
     let mut files = VecDeque::new();
-    let mut spaces = VecDeque::new();
-    for (file_size, space) in input.chars().map(|x| x.to_digit(10).unwrap()).tuples() {
-        files.push_back((file_size, files.len()));
-        spaces.push_back(space);
+    let mut free = VecDeque::new();
+    let mut file = true;
+    for size in input.chars().map(|x| x.to_digit(10).unwrap() as usize) {
+        if file {
+            files.push_back((size, files.len()));
+        } else {
+            free.push_back(size);
+        }
+        file = !file;
     }
-    files.push_back((input.chars().last().unwrap().to_digit(10).unwrap(), files.len()));
 
     let mut result = 0;
     let mut position = 0;
@@ -16,12 +19,10 @@ pub fn solve_first(input: &str) -> usize {
         let Some((file_size, file_id)) = files.pop_front() else {
             break;
         };
-        for _ in 0..file_size {
-            result += position * file_id;
-            position += 1;
-        }
+        result += file_id * (position..position + file_size).sum::<usize>();
+        position += file_size;
 
-        if let Some(space) = spaces.pop_front() {
+        if let Some(space) = free.pop_front() {
             for _ in 0..space {
                 let Some((file_size, file_id)) = files.back_mut() else {
                     break;
@@ -41,14 +42,14 @@ pub fn solve_first(input: &str) -> usize {
 
 pub fn solve_second(input: &str) -> usize {
     enum Block {
-        File(u32, usize), // (size, id)
-        Free(u32),        // (size)
+        File(usize, usize), // (size, id)
+        Free(usize),        // (size)
     }
 
     let mut blocks = Vec::new();
     let mut file_sizes = Vec::new();
     let mut file = true;
-    for size in input.chars().map(|x| x.to_digit(10).unwrap()) {
+    for size in input.chars().map(|x| x.to_digit(10).unwrap() as usize) {
         if file {
             blocks.push(Block::File(size, file_sizes.len()));
             file_sizes.push(size);
@@ -75,8 +76,10 @@ pub fn solve_second(input: &str) -> usize {
         }
         let file_block_id = file_block_id.unwrap();
         if let Some(free_space_id) = free_space_id {
-            blocks.push(Block::Free(file_size));
-            let file_block = blocks.swap_remove(file_block_id);
+            // works without merging adjacent free blocks
+            // because every file block to the right was already moved,
+            // but the empty space matters for the final position calculation
+            let file_block = std::mem::replace(&mut blocks[file_block_id], Block::Free(file_size));
             let Block::Free(space) = &mut blocks[free_space_id] else { unreachable!() };
             *space -= file_size;
             blocks.insert(free_space_id, file_block);
@@ -88,10 +91,8 @@ pub fn solve_second(input: &str) -> usize {
     for block in blocks {
         match block {
             Block::File(space, id) => {
-                for _ in 0..space {
-                    result += position as usize * id;
-                    position += 1;
-                }
+                result += id * (position..position + space).sum::<usize>();
+                position += space;
             }
             Block::Free(space) => position += space,
         }
