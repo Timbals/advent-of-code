@@ -54,6 +54,7 @@ pub fn solve_second(input: &str) -> usize {
         let mut stack = vec![start];
         remaining.remove(&start);
 
+        // (vertical, main_coordinate, cross_coordinate, sign)
         let mut sides = BTreeSet::new();
 
         while let Some((x, y)) = stack.pop() {
@@ -68,10 +69,10 @@ pub fn solve_second(input: &str) -> usize {
                     }
                 } else {
                     match (dx, dy) {
-                        (-1, 0) => sides.insert((true, x, y)),
-                        (1, 0) => sides.insert((true, x + 1, y)),
-                        (0, -1) => sides.insert((false, y, x)),
-                        (0, 1) => sides.insert((false, y + 1, x)),
+                        (-1, 0) => sides.insert((true, x, y, false)),
+                        (1, 0) => sides.insert((true, x + 1, y, true)),
+                        (0, -1) => sides.insert((false, y, x, false)),
+                        (0, 1) => sides.insert((false, y + 1, x, true)),
                         _ => unreachable!(),
                     };
                 }
@@ -81,25 +82,8 @@ pub fn solve_second(input: &str) -> usize {
         let sides = sides
             .into_iter()
             .coalesce(|a, b| {
-                if a.0 == b.0 && a.1 == b.1 && a.2 + 1 == b.2 {
-                    let (x1, y1) = if a.0 { (a.1, a.2) } else { (a.2, a.1) };
-                    let (x2, y2) = if b.0 { (b.1, b.2) } else { (b.2, b.1) };
-                    let (dx, dy) = (-isize::from(a.0), -isize::from(!a.0));
-                    if (grid.get(y1).and_then(|row| row.get(x1)) == Some(&value)
-                        && grid.get(y2).and_then(|row| row.get(x2)) == Some(&value))
-                        || (grid
-                            .get(y1.wrapping_add_signed(dy))
-                            .and_then(|row| row.get(x1.wrapping_add_signed(dx)))
-                            == Some(&value)
-                            && grid
-                                .get(y2.wrapping_add_signed(dy))
-                                .and_then(|row| row.get(x2.wrapping_add_signed(dx)))
-                                == Some(&value))
-                    {
-                        Ok(b)
-                    } else {
-                        Err((a, b))
-                    }
+                if a.0 == b.0 && a.1 == b.1 && a.2 + 1 == b.2 && a.3 == b.3 {
+                    Ok(b)
                 } else {
                     Err((a, b))
                 }
