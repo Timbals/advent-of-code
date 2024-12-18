@@ -1,32 +1,27 @@
-use itertools::Itertools;
-use std::cmp::Reverse;
-use std::collections::{BTreeSet, BinaryHeap};
+use std::collections::VecDeque;
 
-pub fn solve_first(input: &str, size: isize, limit: usize) -> usize {
-    let mut visited = input
-        .lines()
-        .take(limit)
-        .map(|line| {
-            let (x, y) = line.split_once(',').unwrap();
-            (x.parse::<isize>().unwrap(), y.parse::<isize>().unwrap())
-        })
-        .collect::<BTreeSet<_>>();
+pub fn solve_first(input: &str, size: usize, limit: usize) -> usize {
+    let mut visited =
+        (0..size).map(|_| (0..size).map(|_| false).collect::<Vec<_>>()).collect::<Vec<_>>();
+    for (x, y) in input.lines().take(limit).map(|line| {
+        let (x, y) = line.split_once(',').unwrap();
+        (x.parse::<usize>().unwrap(), y.parse::<usize>().unwrap())
+    }) {
+        visited[y][x] = true;
+    }
 
-    let mut queue = BinaryHeap::new();
-    queue.push((Reverse(0), 0, 0));
-    while let Some((steps, x, y)) = queue.pop() {
+    let mut queue = VecDeque::new();
+    queue.push_back((0, 0, 0));
+    while let Some((steps, x, y)) = queue.pop_front() {
         if x == size - 1 && y == size - 1 {
-            return steps.0;
+            return steps;
         }
 
         for (dx, dy) in [(1, 0), (0, 1), (-1, 0), (0, -1)] {
-            let (nx, ny) = (x + dx, y + dy);
-            if (0..size).contains(&nx)
-                && (0..size).contains(&ny)
-                && !visited.iter().contains(&(nx, ny))
-            {
-                visited.insert((nx, ny));
-                queue.push((Reverse(steps.0 + 1), nx, ny));
+            let (nx, ny) = (x.wrapping_add_signed(dx), y.wrapping_add_signed(dy));
+            if (0..size).contains(&nx) && (0..size).contains(&ny) && !visited[ny][nx] {
+                visited[ny][nx] = true;
+                queue.push_back((steps + 1, nx, ny));
             }
         }
     }
@@ -34,30 +29,28 @@ pub fn solve_first(input: &str, size: isize, limit: usize) -> usize {
     unreachable!("no valid path")
 }
 
-pub fn solve_second(input: &str, size: isize) -> String {
-    let mut visited_template = BTreeSet::new();
+pub fn solve_second(input: &str, size: usize) -> String {
+    let mut visited_template =
+        (0..size).map(|_| (0..size).map(|_| false).collect::<Vec<_>>()).collect::<Vec<_>>();
     'outer: for (new_x, new_y) in input.lines().map(|line| {
         let (x, y) = line.split_once(',').unwrap();
-        (x.parse::<isize>().unwrap(), y.parse::<isize>().unwrap())
+        (x.parse::<usize>().unwrap(), y.parse::<usize>().unwrap())
     }) {
-        visited_template.insert((new_x, new_y));
+        visited_template[new_y][new_x] = true;
         let mut visited = visited_template.clone();
 
-        let mut queue = BinaryHeap::new();
-        queue.push((Reverse(0), 0, 0));
-        while let Some((steps, x, y)) = queue.pop() {
+        let mut queue = VecDeque::new();
+        queue.push_back((0, 0, 0));
+        while let Some((steps, x, y)) = queue.pop_front() {
             if x == size - 1 && y == size - 1 {
                 continue 'outer;
             }
 
             for (dx, dy) in [(1, 0), (0, 1), (-1, 0), (0, -1)] {
-                let (nx, ny) = (x + dx, y + dy);
-                if (0..size).contains(&nx)
-                    && (0..size).contains(&ny)
-                    && !visited.iter().contains(&(nx, ny))
-                {
-                    visited.insert((nx, ny));
-                    queue.push((Reverse(steps.0 + 1), nx, ny));
+                let (nx, ny) = (x.wrapping_add_signed(dx), y.wrapping_add_signed(dy));
+                if (0..size).contains(&nx) && (0..size).contains(&ny) && !visited[ny][nx] {
+                    visited[ny][nx] = true;
+                    queue.push_back((steps + 1, nx, ny));
                 }
             }
         }
