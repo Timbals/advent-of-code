@@ -1,33 +1,6 @@
-use std::collections::{BinaryHeap, HashMap, HashSet};
+use std::collections::{BinaryHeap, HashMap};
 
-pub fn solve_first(input: &str) -> usize {
-    let mut lines = input.lines();
-    let available = lines.next().unwrap().split(", ").collect::<Vec<_>>();
-    lines.next().unwrap();
-
-    let mut result = 0;
-    for design in lines {
-        let mut visited = HashSet::new();
-        let mut stack = vec![design];
-        while let Some(design) = stack.pop() {
-            if design.is_empty() {
-                result += 1;
-                break;
-            }
-
-            for &towel in &available {
-                if let Some(remaining) = design.strip_prefix(towel) {
-                    if visited.insert(remaining) {
-                        stack.push(remaining);
-                    }
-                }
-            }
-        }
-    }
-    result
-}
-
-pub fn solve_second(input: &str) -> usize {
+pub fn solve(input: &str, possibilities: bool) -> usize {
     let mut lines = input.lines();
     let available = lines.next().unwrap().split(", ").collect::<Vec<_>>();
     lines.next().unwrap();
@@ -49,7 +22,11 @@ pub fn solve_second(input: &str) -> usize {
             }
         }
 
-        result += visited.get("").unwrap_or(&0);
+        if possibilities {
+            result += visited.get("").unwrap_or(&0);
+        } else {
+            result += usize::from(visited.contains_key(""));
+        }
     }
     result
 }
@@ -57,13 +34,13 @@ pub fn solve_second(input: &str) -> usize {
 #[test]
 pub fn sample() {
     let sample = include_str!("sample.txt");
-    assert_eq!(6, solve_first(sample));
-    assert_eq!(16, solve_second(sample));
+    assert_eq!(6, solve(sample, false));
+    assert_eq!(16, solve(sample, true));
 }
 
 #[test]
 pub fn input() {
     let input = include_str!("input.txt");
-    assert_eq!(367, solve_first(input));
-    assert_eq!(724388733465031, solve_second(input));
+    assert_eq!(367, solve(input, false));
+    assert_eq!(724388733465031, solve(input, true));
 }
