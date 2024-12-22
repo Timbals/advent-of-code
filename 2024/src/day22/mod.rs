@@ -1,68 +1,46 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use itertools::Itertools;
+use std::collections::{HashMap, HashSet};
 
-pub fn solve_first(input: &str) -> u64 {
+fn rand(mut seed: usize) -> usize {
+    seed ^= (seed << 6) & 0xFFFFFF;
+    seed ^= (seed >> 5) & 0xFFFFFF;
+    seed ^ (seed << 11) & 0xFFFFFF
+}
+
+pub fn solve_first(input: &str) -> usize {
     input
         .lines()
         .map(|line| {
-            let mut seed = line.parse::<u64>().unwrap();
+            let mut seed = line.parse::<usize>().unwrap();
             for _ in 0..2000 {
-                // shift left 6
-                seed ^= seed * 64;
-                // mask out last 24 bits
-                seed %= 16777216;
-                // shift right 5
-                seed ^= seed / 32;
-                // mask out last 24 bits
-                seed %= 16777216;
-                // shift left 11
-                seed ^= seed * 2048;
-                // mask out last 24 bits
-                seed %= 16777216;
+                seed = rand(seed);
             }
             seed
         })
         .sum()
 }
 
-pub fn solve_second(input: &str) -> u64 {
+pub fn solve_second(input: &str) -> usize {
     let mut scores = HashMap::new();
 
     for line in input.lines() {
-        let mut seed = line.parse::<u64>().unwrap();
-        let mut changes = VecDeque::with_capacity(5);
-        let mut seen = HashSet::new();
-        for _ in 0..2000 {
+        let mut seed = line.parse::<usize>().unwrap();
+        let data = (0..2000).map(|_| {
             let initial = seed;
+            seed = rand(seed);
+            (seed % 10, (seed % 10) as isize - (initial % 10) as isize)
+        });
 
-            // shift left 6
-            seed ^= seed * 64;
-            // mask out last 24 bits
-            seed %= 16777216;
-            // shift right 5
-            seed ^= seed / 32;
-            // mask out last 24 bits
-            seed %= 16777216;
-            // shift left 11
-            seed ^= seed * 2048;
-            // mask out last 24 bits
-            seed %= 16777216;
-
-            let change = (seed % 10) as isize - (initial % 10) as isize;
-            changes.push_back(change);
-            if changes.len() == 5 {
-                changes.pop_front();
-            }
-            if changes.len() == 4 {
-                let sequence: [isize; 4] =
-                    changes.iter().copied().collect::<Vec<_>>().try_into().unwrap();
-                if seen.insert(sequence) {
-                    *scores.entry(sequence).or_default() += seed % 10;
-                }
+        let mut seen = HashSet::new();
+        for (a, b, c, d) in data.tuple_windows() {
+            let sequence = (a.1, b.1, c.1, d.1);
+            if seen.insert(sequence) {
+                *scores.entry(sequence).or_default() += d.0;
             }
         }
     }
 
-    scores.into_values().max().unwrap()
+    scores.into_values().max().unwrap_or_default()
 }
 
 #[test]
