@@ -1,22 +1,24 @@
 use itertools::Itertools;
 use std::collections::{BTreeSet, HashMap, HashSet};
 
-pub fn solve_first(input: &str) -> usize {
-    let mut neighbors = HashMap::<&str, HashSet<&str>>::new();
+fn parse(input: &str) -> HashMap<&str, BTreeSet<&str>> {
+    let mut neighbors = HashMap::<&str, BTreeSet<&str>>::new();
     for (from, to) in input.lines().map(|line| line.split_once('-').unwrap()) {
         neighbors.entry(from).or_default().insert(to);
         neighbors.entry(to).or_default().insert(from);
     }
+    neighbors.shrink_to_fit();
+    neighbors
+}
+
+pub fn solve_first(input: &str) -> usize {
+    let neighbors = parse(input);
 
     let mut three_components = HashSet::new();
     for &node in neighbors.keys().filter(|node| node.starts_with('t')) {
         for &neighbor1 in &neighbors[node] {
-            for &neighbor2 in &neighbors[neighbor1] {
-                for &neighbor3 in &neighbors[neighbor2] {
-                    if neighbor3 == node {
-                        three_components.insert(BTreeSet::from([node, neighbor1, neighbor2]));
-                    }
-                }
+            for neighbor2 in neighbors[node].intersection(&neighbors[neighbor1]) {
+                three_components.insert(BTreeSet::from([node, neighbor1, neighbor2]));
             }
         }
     }
@@ -25,11 +27,7 @@ pub fn solve_first(input: &str) -> usize {
 }
 
 pub fn solve_second(input: &str) -> String {
-    let mut neighbors = HashMap::<&str, BTreeSet<&str>>::new();
-    for (from, to) in input.lines().map(|line| line.split_once('-').unwrap()) {
-        neighbors.entry(from).or_default().insert(to);
-        neighbors.entry(to).or_default().insert(from);
-    }
+    let neighbors = parse(input);
 
     let mut components =
         neighbors.keys().map(|&node| BTreeSet::from([node])).collect::<HashSet<_>>();
