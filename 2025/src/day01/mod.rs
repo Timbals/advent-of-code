@@ -29,20 +29,16 @@ pub fn solve_second(input: &str) -> usize {
     for line in input.lines() {
         let (direction, amount) = line.split_at(1);
 
-        let mut amount: isize = amount.parse().unwrap();
+        let amount: isize = amount.parse().unwrap();
         let operation = match direction {
             "L" => isize::strict_sub,
             "R" => isize::strict_add,
             _ => unreachable!(),
         };
 
-        while amount > 0 {
-            amount -= 1;
-            dial = operation(dial, 1).rem_euclid(100);
-            if dial == 0 {
-                count += 1;
-            }
-        }
+        let new_dial = operation(dial, amount);
+        count += (new_dial / 100).unsigned_abs() + usize::from(new_dial <= 0 && dial != 0);
+        dial = new_dial.rem_euclid(100);
     }
 
     count
