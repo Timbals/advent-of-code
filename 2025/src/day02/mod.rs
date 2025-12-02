@@ -1,5 +1,3 @@
-use itertools::Itertools;
-
 pub fn solve_first(input: &str) -> usize {
     let mut invalid = 0;
 
@@ -7,9 +5,9 @@ pub fn solve_first(input: &str) -> usize {
         let (start, end) = range.split_once('-').unwrap();
         let (start, end): (usize, usize) = (start.parse().unwrap(), end.parse().unwrap());
         for id in start..=end {
-            let bytes = id.to_string().into_bytes();
-            let len = bytes.len();
-            if len % 2 == 0 && bytes[..len / 2] == bytes[len / 2..] {
+            let digits = id.checked_ilog10().unwrap_or_default() as usize + 1;
+            let divisor = 10_usize.pow(digits as u32 / 2);
+            if id / divisor == id % divisor {
                 invalid += id;
             }
         }
@@ -25,10 +23,20 @@ pub fn solve_second(input: &str) -> usize {
         let (start, end) = range.split_once('-').unwrap();
         let (start, end): (usize, usize) = (start.parse().unwrap(), end.parse().unwrap());
         for id in start..=end {
-            let bytes = id.to_string().into_bytes();
-            let len = bytes.len();
-            for chunk_size in 1..=len / 2 {
-                if len % chunk_size == 0 && bytes.chunks_exact(chunk_size).all_equal() {
+            let digits = id.checked_ilog10().unwrap_or_default() as usize + 1;
+            for chunk_count in 2..=digits {
+                if !digits.is_multiple_of(chunk_count) {
+                    continue;
+                }
+
+                let divisor = 10_usize.pow((digits / chunk_count) as u32);
+                let mut remaining = id;
+                let first_chunk = remaining % divisor;
+                while remaining % divisor == first_chunk {
+                    remaining /= divisor;
+                }
+
+                if remaining == 0 {
                     invalid += id;
                     break;
                 }
