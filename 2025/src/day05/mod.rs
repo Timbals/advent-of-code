@@ -1,5 +1,5 @@
-use std::cmp::{max, min};
-use std::ops::RangeInclusive;
+use itertools::Itertools;
+use std::cmp::max;
 
 pub fn solve_first(input: &str) -> usize {
     let mut lines = input.lines();
@@ -7,8 +7,8 @@ pub fn solve_first(input: &str) -> usize {
     let mut ranges = Vec::new();
     for line in lines.by_ref().take_while(|x| !x.is_empty()) {
         let (start, end) = line.split_once('-').unwrap();
-        let (start, end) = (start.parse::<usize>().unwrap(), end.parse().unwrap());
-        ranges.push(start..=end);
+        let (start, end) = (start.parse::<usize>().unwrap(), end.parse::<usize>().unwrap() + 1);
+        ranges.push(start..end);
     }
 
     let mut fresh = 0;
@@ -25,25 +25,24 @@ pub fn solve_first(input: &str) -> usize {
 }
 
 pub fn solve_second(input: &str) -> usize {
-    let mut lines = input.lines();
+    let ranges = input
+        .lines()
+        .take_while(|line| !line.is_empty())
+        .map(|line| {
+            let (start, end) = line.split_once('-').unwrap();
+            let (start, end) = (start.parse::<usize>().unwrap(), end.parse::<usize>().unwrap() + 1);
+            (start, end)
+        })
+        .sorted_unstable();
 
-    let mut ranges = Vec::<RangeInclusive<usize>>::new();
-    for line in lines.by_ref().take_while(|x| !x.is_empty()) {
-        let (start, end) = line.split_once('-').unwrap();
-        let (start, end) = (start.parse::<usize>().unwrap(), end.parse().unwrap());
-        let mut range = start..=end;
-        ranges.retain(|other| {
-            if *range.start() <= *other.end() && *range.end() >= *other.start() {
-                range = min(*range.start(), *other.start())..=max(*range.end(), *other.end());
-                false
-            } else {
-                true
-            }
-        });
-        ranges.push(range);
+    let mut fresh = 0;
+    let mut furthest_end = 0;
+    for (start, end) in ranges {
+        let (start, end) = (max(start, furthest_end), max(end, furthest_end));
+        furthest_end = end;
+        fresh += end - start;
     }
-
-    ranges.into_iter().map(RangeInclusive::count).sum()
+    fresh
 }
 
 #[test]
