@@ -1,5 +1,3 @@
-use std::ops::{Add, Mul};
-
 pub fn solve_first(input: &str) -> usize {
     let mut total = 0;
     let mut problems =
@@ -27,38 +25,39 @@ pub fn solve_second(input: &str) -> usize {
     let mut total = 0;
 
     let grid = input.lines().map(str::as_bytes).collect::<Vec<_>>();
+    let width = grid.iter().map(|line| line.len()).max().unwrap_or_default();
 
-    let mut acc = 0;
-    let mut op: fn(usize, usize) -> usize = usize::add;
-    for (i, x) in grid[grid.len() - 1].iter().enumerate() {
-        match *x {
-            b'*' => {
-                total += acc;
-                acc = 1;
-                op = usize::mul;
-            }
-            b'+' => {
-                total += acc;
-                acc = 0;
-                op = usize::add;
-            }
-            b' ' => {}
-            _ => unreachable!(),
-        }
-
+    let mut sum = 0;
+    let mut product = 1;
+    for x in (0..width).rev() {
         let mut number = 0;
-        let mut any = false;
-        for y in 0..grid.len() - 1 {
-            if grid[y].get(i).map(|x| x.is_ascii_digit()).unwrap_or_default() {
-                number = number * 10 + (grid[y][i] - b'0') as usize;
-                any = true;
+        for line in &grid {
+            if let Some(digit) = line.get(x)
+                && digit.is_ascii_digit()
+            {
+                number = number * 10 + (digit - b'0') as usize;
             }
         }
-        if any {
-            acc = op(acc, number);
+        if number != 0 {
+            sum += number;
+            product *= number;
+        }
+
+        match grid[grid.len() - 1].get(x) {
+            Some(b'*') => {
+                total += product;
+                sum = 0;
+                product = 1;
+            }
+            Some(b'+') => {
+                total += sum;
+                sum = 0;
+                product = 1;
+            }
+            _ => {}
         }
     }
-    total += acc;
+
     total
 }
 
