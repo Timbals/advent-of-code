@@ -2,47 +2,54 @@ use itertools::Itertools;
 use std::cmp::Reverse;
 use std::collections::BinaryHeap;
 
-struct Box {
+struct JunctionBox {
     index: usize,
-    x: usize,
-    y: usize,
-    z: usize,
+    x: i64,
+    y: i64,
+    z: i64,
 
-    parent: Option<usize>, // disjoint-set data structure
+    parent: usize, // disjoint-set data structure
     circuit_size: usize,
 }
 
-impl Box {
-    fn circuit(&self, boxes: &[Box]) -> usize {
-        let mut current = self.index;
-        let mut parent = self.parent;
-        while let Some(parent_index) = parent {
-            current = boxes[parent_index].index;
-            parent = boxes[parent_index].parent;
+impl JunctionBox {
+    fn dist_squared(&self, other: &Self) -> i64 {
+        (other.x - self.x).pow(2) + (other.y - self.y).pow(2) + (other.z - self.z).pow(2)
+    }
+
+    fn find_circuit(mut current: usize, boxes: &mut [JunctionBox]) -> usize {
+        while boxes[current].parent != current {
+            (current, boxes[current].parent) =
+                (boxes[current].parent, boxes[boxes[current].parent].parent);
         }
         current
     }
 
-    fn dist(&self, other: &Self) -> usize {
-        self.x.abs_diff(other.x).pow(2)
-            + self.y.abs_diff(other.y).pow(2)
-            + self.z.abs_diff(other.z).pow(2)
+    fn union_circuit(mut a: usize, mut b: usize, boxes: &mut [JunctionBox]) -> usize {
+        if a == b {
+            return a;
+        }
+        if boxes[a].circuit_size < boxes[b].circuit_size {
+            std::mem::swap(&mut a, &mut b);
+        }
+        boxes[b].parent = a;
+        boxes[a].circuit_size += boxes[b].circuit_size;
+        a
     }
 }
 
-pub fn solve_first(input: &str, connection_count: usize) -> usize {
+pub fn solve(input: &str, connection_count: Option<usize>) -> usize {
     let mut boxes = input
         .lines()
         .enumerate()
         .map(|(index, line)| {
-            let (x, rest) = line.split_once(',').unwrap();
-            let (y, z) = rest.split_once(',').unwrap();
-            Box {
+            let mut coordinates = line.split(',').map(|x| x.parse().unwrap());
+            JunctionBox {
                 index,
-                x: x.parse::<usize>().unwrap(),
-                y: y.parse::<usize>().unwrap(),
-                z: z.parse::<usize>().unwrap(),
-                parent: None,
+                x: coordinates.next().unwrap(),
+                y: coordinates.next().unwrap(),
+                z: coordinates.next().unwrap(),
+                parent: index,
                 circuit_size: 1,
             }
         })
@@ -52,78 +59,33 @@ pub fn solve_first(input: &str, connection_count: usize) -> usize {
         .iter()
         .enumerate()
         .tuple_combinations()
-        .map(|((a_index, a), (b_index, b))| (Reverse(a.dist(b)), a_index, b_index))
+        .map(|((a_index, a), (b_index, b))| (Reverse(a.dist_squared(b)), a_index, b_index))
         .collect::<BinaryHeap<_>>();
 
-    for _ in 0..connection_count {
+    for _ in 0..connection_count.unwrap_or(usize::MAX) {
         let (_, a_index, b_index) = distances.pop().unwrap();
-        let a = &boxes[a_index];
-        let a_circuit = a.circuit(&boxes);
-        let b = &boxes[b_index];
-        let b_circuit = b.circuit(&boxes);
+        let a_circuit = JunctionBox::find_circuit(a_index, &mut boxes);
+        let b_circuit = JunctionBox::find_circuit(b_index, &mut boxes);
+        let union = JunctionBox::union_circuit(a_circuit, b_circuit, &mut boxes);
 
-        if a_circuit != b_circuit {
-            boxes[b_circuit].parent = Some(a_circuit);
-            boxes[a_circuit].circuit_size += boxes[b_circuit].circuit_size;
+        if boxes[union].circuit_size == boxes.len() {
+            return (boxes[a_index].x * boxes[b_index].x) as usize;
         }
     }
 
-    boxes.into_iter().filter(|b| b.parent.is_none()).map(|b| b.circuit_size).k_largest(3).product()
-}
-
-pub fn solve_second(input: &str) -> usize {
-    let mut boxes = input
-        .lines()
-        .enumerate()
-        .map(|(index, line)| {
-            let (x, rest) = line.split_once(',').unwrap();
-            let (y, z) = rest.split_once(',').unwrap();
-            Box {
-                index,
-                x: x.parse::<usize>().unwrap(),
-                y: y.parse::<usize>().unwrap(),
-                z: z.parse::<usize>().unwrap(),
-                parent: None,
-                circuit_size: 1,
-            }
-        })
-        .collect::<Vec<_>>();
-
-    let mut distances = boxes
-        .iter()
-        .enumerate()
-        .tuple_combinations()
-        .map(|((a_index, a), (b_index, b))| (Reverse(a.dist(b)), a_index, b_index))
-        .collect::<BinaryHeap<_>>();
-
-    loop {
-        let (_, a_index, b_index) = distances.pop().unwrap();
-        let a = &boxes[a_index];
-        let a_circuit = a.circuit(&boxes);
-        let b = &boxes[b_index];
-        let b_circuit = b.circuit(&boxes);
-
-        if a_circuit != b_circuit {
-            boxes[b_circuit].parent = Some(a_circuit);
-            boxes[a_circuit].circuit_size += boxes[b_circuit].circuit_size;
-
-            if boxes[a_circuit].circuit_size == boxes.len() {
-                return boxes[a_index].x * boxes[b_index].x;
-            }
-        }
-    }
+    boxes.into_iter().filter(|b| b.index == b.parent).map(|b| b.circuit_size).k_largest(3).product()
 }
 
 #[test]
 pub fn sample() {
     let sample = include_str!("sample.txt");
-    assert_eq!(40, solve_first(sample, 10));
-    assert_eq!(25272, solve_second(sample));
+    assert_eq!(40, solve(sample, Some(10)));
+    assert_eq!(25272, solve(sample, None));
 }
 
 #[test]
 pub fn input() {
     let input = include_str!("input.txt");
-    assert_eq!(54180, solve_first(input, 1000));
-    assert_eq!(25325968, solve_second(input));
+    assert_eq!(54180, solve(input, Some(1000)));
+    assert_eq!(25325968, solve(input, None));
 }
