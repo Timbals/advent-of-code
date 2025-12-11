@@ -26,39 +26,30 @@ pub fn solve_first(input: &str) -> usize {
 }
 
 pub fn solve_second(input: &str) -> usize {
-    let mut next_index = 0;
+    let mut device_count = 0;
     let mut device_indices = HashMap::new();
-    let device_to_outputs = input
-        .lines()
-        .map(|line| {
-            let (device, outputs) = line.split_once(": ").unwrap();
-            let outputs = outputs.split(' ').collect::<Vec<_>>();
 
-            device_indices.entry(device).or_insert_with(|| {
-                let index = next_index;
-                next_index += 1;
+    let mut outputs = Vec::new();
+    let mut inputs = Vec::new();
+    for line in input.lines() {
+        let (device, rest) = line.split_once(": ").unwrap();
+        let device = *device_indices.entry(device).or_insert_with(|| {
+            let index = device_count;
+            device_count += 1;
+            outputs.push(Vec::new());
+            inputs.push(Vec::new());
+            index
+        });
+        for output in rest.split(' ') {
+            let output = *device_indices.entry(output).or_insert_with(|| {
+                let index = device_count;
+                device_count += 1;
+                outputs.push(Vec::new());
+                inputs.push(Vec::new());
                 index
             });
-            for &v in &outputs {
-                device_indices.entry(v).or_insert_with(|| {
-                    let index = next_index;
-                    next_index += 1;
-                    index
-                });
-            }
-
-            (device, outputs)
-        })
-        .collect::<HashMap<_, _>>();
-    let mut devices = vec![vec![]; next_index];
-    for (k, v) in device_to_outputs {
-        devices[device_indices[k]] =
-            v.into_iter().filter_map(|v| device_indices.get(v).copied()).collect();
-    }
-    let mut reverse_devices = vec![vec![]; devices.len()];
-    for (device, outputs) in devices.iter().enumerate() {
-        for &output in outputs {
-            reverse_devices[output].push(device);
+            outputs[device].push(output);
+            inputs[output].push(device);
         }
     }
 
@@ -67,15 +58,12 @@ pub fn solve_second(input: &str) -> usize {
     let dac = device_indices["dac"];
     let fft = device_indices["fft"];
 
-    let mut topological_sort = Vec::with_capacity(devices.len());
+    let mut topological_sort = Vec::with_capacity(device_count);
     let mut no_remaining_edges = vec![out];
-    let mut remaining_edges = vec![usize::MAX; devices.len()];
-    for (k, v) in devices.iter().enumerate() {
-        remaining_edges[k] = v.len();
-    }
+    let mut remaining_edges = outputs.iter().map(|e| e.len()).collect::<Vec<_>>();
     while let Some(device) = no_remaining_edges.pop() {
         topological_sort.push(device);
-        for &input in &reverse_devices[device] {
+        for &input in &inputs[device] {
             remaining_edges[input] -= 1;
             if remaining_edges[input] == 0 {
                 no_remaining_edges.push(input);
@@ -83,10 +71,10 @@ pub fn solve_second(input: &str) -> usize {
         }
     }
 
-    let mut cache = vec![vec![0; 4]; devices.len()];
+    let mut cache = vec![[0; 4]; device_count];
     cache[out][0b11] = 1;
     for device in topological_sort {
-        for &output in &devices[device] {
+        for &output in &outputs[device] {
             if device == dac {
                 cache[device][0b00] += cache[output][0b01];
                 cache[device][0b10] += cache[output][0b11];
